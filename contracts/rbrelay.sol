@@ -106,7 +106,7 @@ contract rbrelay {
 		    OFFSET := add(OFFSET,1)
 		    logsBloom := mload(add(add(blockHeaderBytes,OFFSET),0xb4))*/
 
-		    let BLOOM_OFFSET := 0x100 // this one might be correct... not sure
+		    let BLOOM_OFFSET := 0x100 // this one might be correct bytes... not sure
 		    OFFSET := add(0x20,BLOOM_OFFSET)/*
 
 		    // not sure if the following fields are uints - it just says scalars in the yellowpaper
