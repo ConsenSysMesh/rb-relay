@@ -1,19 +1,19 @@
 pragma solidity ^0.4.11;
 
 contract rbrelay {
-	/*uint16 EPOCH_LENGTH = 30000;
+	//uint16 EPOCH_LENGTH = 30000;
 	uint8 BLOCK_PERIOD = 15;
 
-	uint8 EXTRA_VANITY = 32;
-	uint8 EXTRA_SEAL = 65;
+	// uint8 EXTRA_VANITY = 32;
+	// uint8 EXTRA_SEAL = 65;
 
-	uint NONCE_DROP = 0x0000000000000000;
-	uint NONCE_AUTH = 0xffffffffffffffff;
+	// uint NONCE_DROP = 0x0000000000000000;
+	// uint NONCE_AUTH = 0xffffffffffffffff;
 
-	uint8 DIFF_NOTURN = 1;
-	uint8 DIFF_INTURN = 2;
+	// uint8 DIFF_NOTURN = 1;
+	// uint8 DIFF_INTURN = 2;
 
-	bytes32 UNCLE_HASH = sha3([0xc0]);*/
+	// bytes32 UNCLE_HASH = sha3([0xc0]);
 
 	bytes[] rbchain;
 
@@ -63,7 +63,7 @@ contract rbrelay {
 		bytes1[256] memory logsBloom;
 
 		uint8 difficulty;*/
-		uint8 blockNumerLength;
+		uint8 blockNumberLength;
 		//uint blockNumber;
 		//uint gasLimit;
 		uint8 gasLimitLength;
@@ -118,33 +118,43 @@ contract rbrelay {
 		    // 1 byte - no rlp bytes prior
 		    //difficulty := mload(add(add(blockHeaderBytes,OFFSET),0xb4))
 
-		    blockNumerLength := sub(mload(add(add(blockNumerLength,OFFSET),0xb5)),0x80)
+		    blockNumberLength := sub(mload(add(add(blockNumberLength,OFFSET),0xb5)),0x80)
 		}
-		bytes1[blockNumerLength] blockNumber;
+		bytes memory blockNumber = new bytes(blockNumberLength);
 		assembly {
 		    // no offset increase to account for difficulty being 1 byte
 		    blockNumber := mload(add(add(blockHeaderBytes,OFFSET),0xb6))//0xd4
-		    OFFSET := add(OFFSET,blockNumerLength)
+		    OFFSET := add(OFFSET,blockNumberLength)
 
-		    gasLimitLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6))-0x80)
+		    gasLimitLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6)),0x80)
 		    OFFSET := add(OFFSET,1)
 		    //gasLimit := mload(add(add(blockHeaderBytes,OFFSET),0xd6))
 		    OFFSET := add(OFFSET,gasLimitLength)
 
-		    gasUsedLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6))-0x80)
+		    gasUsedLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6)),0x80)
 		    OFFSET := add(OFFSET,1)
 		    //gasUsed := mload(add(add(blockHeaderBytes,OFFSET),0xf6))
 		    OFFSET := add(OFFSET,gasUsedLength)
 
-		    timeStampLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6))-0x80)
+		    timeStampLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6)),0x80)
 		}
-		bytes1[timeStampLength] timeStamp;
+		bytes memory timeStamp = new bytes(timeStampLength);
 		assembly {
 		    OFFSET := add(OFFSET,1)
 		    // 5 bytes... until December 2286
 		    timeStamp := mload(add(add(blockHeaderBytes,OFFSET),0xb6))//0x134
 		}
 
-		return (parentHash,blockNumber,timeStamp);
+		return (parentHash,toUint(blockNumber),toUint(timeStamp));
+	}
+
+	function toUint(bytes b) private returns (uint) {
+		uint result;
+
+		for(uint8 i=1; i<=b.length; i++) {
+			result += uint8(b[i])*(10**(b.length-i));
+		}
+
+		return result;
 	}
 }
