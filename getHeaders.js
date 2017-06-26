@@ -10,9 +10,8 @@ rbrelay.setProvider(ropstenWeb3.currentProvider);
 
 var i = 0;
 while(true) {
-	var result = rinkebyWeb3.eth.getBlockByNumber(i);
-	if(result != null) {
-		var block = result.result;
+	var block = rinkebyWeb3.eth.getBlock(i,true);
+	if(block != null) {
 		var blockBytes = [];
 
 		var headerFields = ["parentHash","sha3Uncles","miner","stateRoot","transactionsRoot",
@@ -20,10 +19,14 @@ while(true) {
 		"extraData","mixHash","nonce"];
 		
 		for(var j=0; j<headerFields.length; j++) {
-			var fieldStr = block[headerFields[j]];
+			var fieldStr = block[headerFields[j]].toString();
+			if((j>6&&j<12)||j==14) {
+				fieldStr += "0x";
+			}
 			var fieldByteArray = hexStrToByteArray(fieldStr);
 			blockBytes.push(fieldByteArray);
 		}
+		console.log(blockBytes);
 		var encoded = RLP.encode(blockBytes);
 
 		var rb;
@@ -42,7 +45,7 @@ function hexStrToByteArray(hexStr) {
 	hexStr = hexStr.slice(3); // remove 0x
 
 	if(hexStr.length%2!=0) {
-		hexStr = "0" + hexStr;
+		hexStr += "0";
 	}
 
 	var bytesLength = hexStr.length/2
