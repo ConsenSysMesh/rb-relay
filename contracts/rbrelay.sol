@@ -51,7 +51,7 @@ contract rbrelay {
 
 	function parseBlockHeader(bytes blockHeaderBytes) private returns (bytes32,uint,
 		uint) {
-		byte lengthByte;
+		uint8 lengthByte;
 
 		bytes32 parentHash;
 		/*bytes32 omnersHash;
@@ -63,10 +63,14 @@ contract rbrelay {
 		bytes1[256] memory logsBloom;
 
 		uint8 difficulty;*/
-		uint blockNumber;
-		/*uint gasLimit;
-		uint gasUsed;*/
-		uint timeStamp;
+		uint8 blockNumerLength;
+		//uint blockNumber;
+		//uint gasLimit;
+		uint8 gasLimitLength;
+		//uint gasUsed;
+		uint8 gasUsedLength;
+		//uint timeStamp;
+		uint8 timeStampLength;
 /*
 		bytes extraData;
 		bytes32 mixHash;
@@ -75,54 +79,70 @@ contract rbrelay {
 		uint OFFSET = 0x20;
 
 		// all the fields are 32 bytes unless otherwise stated
-		/*assembly {
+		assembly {
 			lengthByte := mload(add(blockHeaderBytes,OFFSET))
 		}
 		if(lengthByte<0xf8) {
 			OFFSET += 1;
 		} else {
 			OFFSET += 1 + lengthByte-0xf7;
-		}*/
+		}
 		assembly {
-			//OFFSET := add(OFFSET,1)
+			OFFSET := add(OFFSET,1)
 			parentHash := mload(add(blockHeaderBytes,OFFSET))
 
-			/*OFFSET := add(OFFSET,1)
-		    omnersHash := mload(add(add(blockHeaderBytes,OFFSET),0x20))
+			OFFSET := add(OFFSET,1)
+		    //omnersHash := mload(add(add(blockHeaderBytes,OFFSET),0x20))
 
 		    OFFSET := add(OFFSET,1)
 		    // 20 bytes
-		    beneficiary := mload(add(add(blockHeaderBytes,OFFSET),0x40))
+		    //beneficiary := mload(add(add(blockHeaderBytes,OFFSET),0x40))
 
 		    OFFSET := add(OFFSET,1)
-		    stateRoot := mload(add(add(blockHeaderBytes,OFFSET),0x54))
+		    //stateRoot := mload(add(add(blockHeaderBytes,OFFSET),0x54))
 
 		    OFFSET := add(OFFSET,1)
-		    transactionRoot := mload(add(add(blockHeaderBytes,OFFSET),0x74))
+		    //transactionRoot := mload(add(add(blockHeaderBytes,OFFSET),0x74))
 
 		    OFFSET := add(OFFSET,1)
-		    receiptsRoot := mload(add(add(blockHeaderBytes,OFFSET),0x94))
+		    //receiptsRoot := mload(add(add(blockHeaderBytes,OFFSET),0x94))
 
-		    OFFSET := add(OFFSET,1)
-		    logsBloom := mload(add(add(blockHeaderBytes,OFFSET),0xb4))*/
+		    OFFSET := add(OFFSET,3)
+		    //logsBloom := mload(add(add(blockHeaderBytes,OFFSET),0xb4))
 
-		    let BLOOM_OFFSET := 0x100 // this one might be correct bytes... not sure
-		    OFFSET := add(0x20,BLOOM_OFFSET)/*
+		    let BLOOM_OFFSET := 0x100 // this one may or may not be correct...
+		    OFFSET := add(0x20,BLOOM_OFFSET)
 
 		    // not sure if the following fields are uints - it just says scalars in the yellowpaper
 
+		    // 1 byte - no rlp bytes prior
+		    //difficulty := mload(add(add(blockHeaderBytes,OFFSET),0xb4))
+
+		    blockNumerLength := sub(mload(add(add(blockNumerLength,OFFSET),0xb5)),0x80)
+		}
+		bytes1[blockNumerLength] blockNumber;
+		assembly {
+		    // no offset increase to account for difficulty being 1 byte
+		    blockNumber := mload(add(add(blockHeaderBytes,OFFSET),0xb6))//0xd4
+		    OFFSET := add(OFFSET,blockNumerLength)
+
+		    gasLimitLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6))-0x80)
 		    OFFSET := add(OFFSET,1)
-		    // 1 byte
-		    difficulty := mload(add(add(blockHeaderBytes,OFFSET),0xb4))*/
+		    //gasLimit := mload(add(add(blockHeaderBytes,OFFSET),0xd6))
+		    OFFSET := add(OFFSET,gasLimitLength)
 
-		    blockNumber := mload(add(add(blockHeaderBytes,OFFSET),0xd4))//0xd4
+		    gasUsedLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6))-0x80)
+		    OFFSET := add(OFFSET,1)
+		    //gasUsed := mload(add(add(blockHeaderBytes,OFFSET),0xf6))
+		    OFFSET := add(OFFSET,gasUsedLength)
 
-		    /*gasLimit := mload(add(add(blockHeaderBytes,OFFSET),0xf4))
-
-		    gasUsed := mload(add(add(blockHeaderBytes,OFFSET),0x114))*/
-
-		    // 10 bytes... until December 2286
-		    timeStamp := mload(add(add(blockHeaderBytes,OFFSET),0x134))//0x134
+		    timeStampLength := sub(mload(add(add(blockHeaderBytes,OFFSET),0xb6))-0x80)
+		}
+		bytes1[timeStampLength] timeStamp;
+		assembly {
+		    OFFSET := add(OFFSET,1)
+		    // 5 bytes... until December 2286
+		    timeStamp := mload(add(add(blockHeaderBytes,OFFSET),0xb6))//0x134
 		}
 
 		return (parentHash,blockNumber,timeStamp);
