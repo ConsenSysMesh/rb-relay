@@ -2,8 +2,8 @@ const HDWalletProvider = require("truffle-hdwallet-provider");
 const fs = require("fs");
 
 // first read in the secrets.json to get our mnemonic
-let secrets;
-let mnemonic;
+var secrets;
+var mnemonic;
 if(fs.existsSync("secrets.json")) {
   secrets = JSON.parse(fs.readFileSync("secrets.json", "utf8"));
   mnemonic = secrets.mnemonic;
@@ -14,14 +14,14 @@ if(fs.existsSync("secrets.json")) {
 
 module.exports = {
   networks: {
-  	ropsten: {
-      network_id: "3",
-      provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io")
-    },
     development: {
       host: "localhost",
       port: 8545,
       network_id: "*"
+    },
+    ropsten: {
+      provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io/"),
+      network_id: 3
     }
   }
 };
