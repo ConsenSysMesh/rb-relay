@@ -2,24 +2,45 @@ const Web3 = require(`web3`);
 var contract = require("truffle-contract");
 var rlp = require('rlp');
 var utils = require('ethereumjs-util')
+var fs = require('fs');
+var asyncLoop = require('node-async-loop');
+var HDWalletProvider = require("truffle-hdwallet-provider");
 
-//const ropstenWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/hIIhvL77mY5xhwgaqRmz"));
+var secrets;
+var mnemonic;
+if(fs.existsSync("secrets.json")) {
+  secrets = JSON.parse(fs.readFileSync("secrets.json", "utf8"));
+  mnemonic = secrets.mnemonic;
+} else {
+  console.log("no secrets.json found. You can only deploy to the testrpc.");
+  mnemonic = "" ;
+}
+
 const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/hIIhvL77mY5xhwgaqRmz"));
 
-var rbrelay = contract('build/contracts/rbrelay.json');
-console.log(rbrelay.abi);
-rbrelay.setProvider(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
-console.log(rbrelay.currentProvider);
+var rbrelay_json = JSON.parse(fs.readFileSync("build/contracts/rbrelay.json", "utf8"));
+var rbrelay = contract(rbrelay_json);
+
+var provider = new HDWalletProvider(mnemonic, "https://ropsten.infura.io/hIIhvL77mY5xhwgaqRmz");
+rbrelay.setProvider(provider);
+rbrelay.setNetwork(3);
 
 numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
 stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input), 'hex') }
 byteable = (input)=>{ return input.length % 2 == 0 ? input : '0' + input }
 
-var i = 0;
-while(true) {
+var startBlockNumber = 0;
+var maxBlockNumber = 449300;
+
+var a = [];
+for(var i=startBlockNumber; i<=maxBlockNumber; i++) {
+	a.push(i);
+}
+
+i = 0;
+asyncLoop(a, function(item, next) {
 	var block = rinkebyWeb3.eth.getBlock(i,true);
 	if(block != null) {
-		//console.log(block);
 		var hash = block["hash"];
 
 		var blockBytes = [];
@@ -71,56 +92,25 @@ while(true) {
 		console.log(utils.sha3(rlp.encode(unsignedBlockBytes)).toString('hex'));
 		console.log("signed:");
 		console.log(utils.sha3(rlp.encode(blockBytes)).toString('hex'));*/
-		//console.log(blockBytes);
-		//var encoded = rlp.encode(blockBytes);
 		var unsignedHash = utils.sha3(rlp.encode(unsignedBlockBytes)).toString('hex');
 		var signedHash = utils.sha3(rlp.encode(blockBytes)).toString('hex');
 		console.log(rbrelay.isDeployed());
 		var rb;
-		rbrelay.at("0x3fac69f15bff47cbd3ebd7761ce2079c2c5f20ac").then(function(instance) {
+		rbrelay.deployed().then(function(instance) {
 			rb = instance;
 			console.log("almost there!");
 			return rb.storeBlockHeader(parentHash,stateRoot,transactionsRoot,
-				receiptsRoot,blockNumber,r,s,v,unsignedHash,signedHash,{from:ropstenWeb3.accounts[0]});
+				receiptsRoot,blockNumber,r,s,v,unsignedHash,signedHash,{from:provider.getAddress()});
 		}).then(function(value) {
-			console.log(i);
+			console.log(a[i]);
 		 	i++;
 		}).catch(function(e) {
 			throw new Error(e);
-		});
+		}).then(next);
 	}
-}
-
-// function hexStrToByteArray(hexStr) {
-// 	hexStr = hexStr.slice(2); // remove 0x
-
-// 	if(hexStr.length%2!=0) {
-// 		hexStr = "0" + hexStr;
-// 	}
-
-// 	var bytesLength = hexStr.length/2
-
-// 	var byteArray = new Uint8Array(bytesLength);
-
-// 	for(var i=0; i<bytesLength; i++) {
-// 	    var sum = 0;
-	    
-// 	    var first = hexStr.charCodeAt(i);
-// 	    if(first<97) {
-// 	        sum += 16*(first-48);
-// 	    } else {
-// 	        sum += 16*(first-87);
-// 	    }
-	    
-// 	    var second = hexStr.charCodeAt(i+1);
-// 	    if(second<97) {
-// 	        sum += second-48;
-// 	    } else {
-// 	        sum += second-87;
-// 	    }
-
-// 	    byteArray[i] = sum;
-// 	}
-
-// 	return byteArray;
-// }
+}, function (err) {
+    if (err) {
+        console.error('Error: ' + err.message);
+        return;
+    }
+});

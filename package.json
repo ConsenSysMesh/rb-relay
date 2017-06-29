@@ -4,6 +4,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "ethereumjs-util": "^5.1.2",
+    "node-async-loop": "^1.2.2",
     "rlp": "^2.0.0",
     "truffle-contract": "^2.0.1",
     "truffle-hdwallet-provider": "0.0.3",
