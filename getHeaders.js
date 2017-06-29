@@ -3,11 +3,12 @@ var contract = require("truffle-contract");
 var rlp = require('rlp');
 var utils = require('ethereumjs-util')
 
-const ropstenWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/hIIhvL77mY5xhwgaqRmz"));
+//const ropstenWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/hIIhvL77mY5xhwgaqRmz"));
 const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/hIIhvL77mY5xhwgaqRmz"));
 
 var rbrelay = contract('build/contracts/rbrelay.json');
-rbrelay.setProvider(new Web3.providers.HttpProvider("https://rinkeby.infura.io"));
+console.log(rbrelay.abi);
+rbrelay.setProvider(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
 console.log(rbrelay.currentProvider);
 
 numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
@@ -76,7 +77,7 @@ while(true) {
 		var signedHash = utils.sha3(rlp.encode(blockBytes)).toString('hex');
 		console.log(rbrelay.isDeployed());
 		var rb;
-		rbrelay.deployed().then(function(instance) {
+		rbrelay.at("0x3fac69f15bff47cbd3ebd7761ce2079c2c5f20ac").then(function(instance) {
 			rb = instance;
 			console.log("almost there!");
 			return rb.storeBlockHeader(parentHash,stateRoot,transactionsRoot,
