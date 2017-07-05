@@ -42,8 +42,8 @@ contract rbrelay {
 		if(blockNumber > 0) {
 			require(blockNumber == 0 || parentHash == rbchain[blockNumber - 1].blockHash);
 
-			//var (,,prevTimestamp) = rbchain[blockNumber - 1].timeStamp;
-			//require(timeStamp >= prevTimestamp + BLOCK_PERIOD);
+			// var (,,prevTimestamp) = rbchain[blockNumber - 1].timeStamp;
+			// require(timeStamp >= prevTimestamp + BLOCK_PERIOD);
 		}
 
 		// are the following checks necessary??

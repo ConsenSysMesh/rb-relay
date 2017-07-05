@@ -17,13 +17,14 @@ if(fs.existsSync("secrets.json")) {
 }
 
 const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/hIIhvL77mY5xhwgaqRmz"));
+// var rpcWeb3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"))
 
 var rbrelay_json = JSON.parse(fs.readFileSync("build/contracts/rbrelay.json", "utf8"));
 var rbrelay = contract(rbrelay_json);
 
-var provider = new HDWalletProvider(mnemonic, "https://ropsten.infura.io/hIIhvL77mY5xhwgaqRmz");
+var provider = new HDWalletProvider(mnemonic, "https://kovan.infura.io/hIIhvL77mY5xhwgaqRmz");
 rbrelay.setProvider(provider);
-rbrelay.setNetwork(3);
+rbrelay.setNetwork(42);
 
 numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
 stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input), 'hex') }
@@ -77,9 +78,9 @@ asyncLoop(a, function(item, next) {
 			if(headerFields[j]=="extraData") {
 				var sig = fieldBuf.slice(32);
 				//console.log("r:");
-				r = sig.slice(0,32).toString('hex');
+				r = "0x" + sig.slice(0,32).toString('hex');
 				//console.log("s:");
-				s = sig.slice(32,64).toString('hex');
+				s = "0x" + sig.slice(32,64).toString('hex');
 				//console.log("v:");
 				// add 27 cuz of some bug
 				v = parseInt(sig.slice(64,65).toString('hex'))+27;
@@ -92,15 +93,15 @@ asyncLoop(a, function(item, next) {
 		console.log(utils.sha3(rlp.encode(unsignedBlockBytes)).toString('hex'));
 		console.log("signed:");
 		console.log(utils.sha3(rlp.encode(blockBytes)).toString('hex'));*/
-		var unsignedHash = utils.sha3(rlp.encode(unsignedBlockBytes)).toString('hex');
-		var signedHash = utils.sha3(rlp.encode(blockBytes)).toString('hex');
+		var unsignedHash = "0x" + utils.sha3(rlp.encode(unsignedBlockBytes)).toString('hex');
+		var signedHash = "0x" + utils.sha3(rlp.encode(blockBytes)).toString('hex');
 		console.log(rbrelay.isDeployed());
 		var rb;
 		rbrelay.deployed().then(function(instance) {
 			rb = instance;
 			console.log("almost there!");
 			return rb.storeBlockHeader(parentHash,stateRoot,transactionsRoot,
-				receiptsRoot,blockNumber,r,s,v,unsignedHash,signedHash,{from:provider.getAddress()});
+				receiptsRoot,blockNumber,r,s,v,unsignedHash,signedHash,{from:provider.getAddress(), gas: 4000000});
 		}).then(function(value) {
 			console.log(a[i]);
 		 	i++;
@@ -114,3 +115,7 @@ asyncLoop(a, function(item, next) {
         return;
     }
 });
+
+/*
+rbrelay.deployed().then(function(instance) {rb=instance;return rb.storeBlockHeader("0x0000000000000000000000000000000000000000000000000000000000000000","0x53580584816f617295ea26c0e17641e0120cab2f0a8ffb53a866fd53aa8e8c2d","0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",0,"0x0000000000000000000000000000000000000000000000000000000000000000","0x0000000000000000000000000000000000000000000000000000000000000000",0,"0x468299f8ae3ca255b24078c25564581d49f5ead8fcdfbdc9f1bdce0fd699494e","0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177",{from:provider.getAddress()}); }).then(function(value) {console.log("success")}).catch(function(e) {console.log("failure!"); throw new Error(e); })
+*/

@@ -19,9 +19,9 @@ module.exports = {
       port: 8545,
       network_id: "*"
     },
-    ropsten: {
-      provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io/"),
-      network_id: 3
+    kovan: {
+      provider: new HDWalletProvider(mnemonic, "https://kovan.infura.io/"),
+      network_id: 42
     }
   }
 };
