@@ -17,6 +17,8 @@ contract rbrelay {
 
 	block[] public rbchain;
 
+	uint public latest;
+
 	address[] signers = [0x42EB768f2244C8811C63729A21A3569731535f06,
 						 0x7ffC57839B00206D1ad20c69A1981b489f772031,
 						 0xB279182D99E65703F0076E4812653aaB85FCA0f0];
@@ -36,8 +38,6 @@ contract rbrelay {
 		bytes32 receiptsRoot,uint blockNumber,bytes32 r,bytes32 s,uint8 v,bytes32 uinsignedHash,
 		bytes32 signedHash) {
 		//var (parentHash,blockNumber,timeStamp,s,r,v,newSigners) = parseBlockHeader(blockHeaderBytes);
-
-		require(blockNumber == rbchain.length);
 
 		if(blockNumber > 0) {
 			require(blockNumber == 0 || parentHash == rbchain[blockNumber - 1].blockHash);
@@ -81,7 +81,15 @@ contract rbrelay {
 		b.blockNumber = blockNumber;
 		b.blockHash = signedHash;
 
-	    rbchain.push(b);
+		if(blockNumber == rbchain.length) {
+			rbchain.push(b);
+		} else if(blockNumber < rbchain.length) {
+			rbchain[blockNumber] = b;
+		} else {
+			throw;
+		}
+
+		latest = blockNumber;
 	}
 
 // 	function parseBlockHeader(bytes blockHeaderBytes) private returns (bytes32,uint,
