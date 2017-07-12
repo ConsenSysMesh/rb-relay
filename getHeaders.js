@@ -31,7 +31,7 @@ stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input)
 byteable = (input)=>{ return input.length % 2 == 0 ? input : '0' + input }
 
 var startBlockNumber = 0;
-var maxBlockNumber = 449300;
+var maxBlockNumber = 1000000;
 
 var a = [];
 for(var i=startBlockNumber; i<=maxBlockNumber; i++) {
@@ -87,7 +87,7 @@ rbrelay.deployed().then(function(instance) {
 				blockBytes.push(fieldBuf);
 
 				if(headerFields[j]=="extraData") {
-					var sig = fieldBuf.slice(32);
+					var sig = fieldBuf.slice(-65);
 					//console.log("r:");
 					r = "0x" + sig.slice(0,32).toString('hex');
 					//console.log("s:");
