@@ -1,9 +1,9 @@
-pragma solidity ^0.4.12;
+pragma solidity ^0.4.11;
 
 import "./RLP.sol";
 
 contract Target {
-	function processTransaction(bytes rawTx,bytes32 txHash) {}
+	function processTransaction(bytes rawTx, bytes32 txHash) {}
 }
 
 contract rbrelay {
@@ -40,44 +40,43 @@ contract rbrelay {
 		isSigner[0xB279182D99E65703F0076E4812653aaB85FCA0f0] = true;
 	}
 
-	function storeBlockHeader(bytes headerBytes, bytes32 r, bytes32 s, uint8 v, bytes32 blockHash) {
-		var (parentHash, stateRoot, transactionsRoot, receiptsRoot, blockNumber) = parseBlockHeader(headerBytes);
+	function storeBlockHeader(bytes headerBytes, bytes32 r, bytes32 s, uint8 v) {
+		var (h, unsignedHash, blockHash) = parseBlockHeader(headerBytes,r,s,v);
 
-		require(verifyHeader(headerBytes, parentHash, r, s, v, blockHash));
-
-		header h;
-
-		h.parentHash = parentHash;
-		h.stateRoot = stateRoot;
-		h.transactionsRoot = transactionsRoot;
-		h.receiptsRoot = receiptsRoot;
-		h.blockNumber = blockNumber;
+		require(verifyHeader(h.parentHash, unsignedHash, r, s, v));
 
 		rbchain[blockHash] = h;
 
-		latest = blockNumber;
+		latest = h.blockNumber;
 	}
 
-	function parseBlockHeader(bytes headerBytes) returns (bytes32, bytes32, bytes32, bytes32, uint) 
+	function parseBlockHeader(bytes headerBytes, bytes32 r, bytes32 s, uint8 v) internal returns (header, bytes32, bytes32) 
 	{
 		RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
-        RLP.RLPItem[] memory h = RLP.toList(item);
+        RLP.RLPItem[] memory rlpH = RLP.toList(item);
 
-		bytes32 parentHash = RLP.toBytes32(h[0]);
-		bytes32 stateRoot = RLP.toBytes32(h[3]);
-		bytes32 transactionsRoot = RLP.toBytes32(h[4]);
-		bytes32 receiptsRoot = RLP.toBytes32(h[5]);
-		uint blockNumber = RLP.toUint(h[8]);
+        header h;
 
-		return (parentHash, stateRoot, transactionsRoot, receiptsRoot, blockNumber);
+		h.parentHash = RLP.toBytes32(rlpH[0]);
+		h.stateRoot = RLP.toBytes32(rlpH[3]);
+		h.transactionsRoot = RLP.toBytes32(rlpH[4]);
+		h.receiptsRoot = RLP.toBytes32(rlpH[5]);
+		h.blockNumber = RLP.toUint(rlpH[8]);
+
+		bytes32 unsignedHash = sha3(headerBytes);
+		bytes32 blockHash;
+		/*
+			block hash = sha3(RLP(h[i])) | h[12] = RLP(toData(h[12]) + r + s + v)
+		*/
+
+		return (h, unsignedHash, blockHash);
 	}
     
-	function verifyHeader(bytes headerBytes, bytes32 parentHash, bytes32 r, bytes32 s, uint8 v, bytes32 blockHash) returns (bool) {
+	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 r, bytes32 s, uint8 v) returns (bool) {
 	    if(rbchain[parentHash].stateRoot==0x0) {
 		    return false;
 	    }
-
-		bytes32 unsignedHash = sha3(headerBytes);
+		
 		address miner = ecrecover(unsignedHash,v,r,s);
 		if (isSigner[miner]) {
 			return true;
@@ -86,11 +85,11 @@ contract rbrelay {
 		return false;
 	}
 
-	function relayTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash, address Contract) {
+	function relayTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash, address targetAddr) {
 		bytes32 txHash = verifyTx(rawTx,txIndex,stack,blockHash);
 		require(txHash != 0x0);
 
-		Target t = Target(Contract);
+		Target t = Target(targetAddr);
 		t.processTransaction(rawTx,txHash);
 	}
 
@@ -110,62 +109,65 @@ contract rbrelay {
 		*/
 	}
 
-	// value and stack are rlp encoded
-	function verifyMerkleProof(bytes value, bytes path, bytes stack, bytes32 root) returns (bool) {
-		bytes[] rlpNode;
-		RLP.RLPItem[][] valueInNode;
+	// value and rlpStack are rlp encoded
+	function verifyMerkleProof(bytes value, bytes path, bytes rlpStack, bytes32 root) constant returns (bool) {
+		// RLP.RLPItem[][] valueInNode;
 
-		RLP.RLPItem memory item = RLP.toRLPItem(stack);
-        RLP.RLPItem[] memory s = RLP.toList(item);
-        for(uint i=0; i<s.length; i++) {
-        	rlpNode.push(RLP.toBytes(s[i]));
-        	valueInNode.push(RLP.toList(s[i]));
-        }
+		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
+        RLP.RLPItem[] memory stack = RLP.toList(item);
+        // for(uint i=0; i<s.length; i++) {
+        // 	valueInNode.push(RLP.toList(s[i]));
+        // }
 
-		bytes currentNode;
-		RLP.RLPItem[] currentNodeValues;
-	    uint len = rlpNode.length;
+        /*
+			copy type struct RLPItem memory[] memory to storage:
+			s is type RLPItem[] memory
+			s[i] is type RLPItem memory
+			toList(s[i]) is type RLPItem[] memory
+        */
+
+
+		bytes memory currentNode;
+		RLP.RLPItem[] memory currentNodeList;
 	    
 	    bytes32 nodeKey = root;
 	    uint pathPtr = 0;
 	    
-	    for (uint i=0; i<len; i++) {
-			currentNodeValues = valueInNode[i];
+	    for (uint i=0; i<stack.length; i++) {
+	    	if(pathPtr > path.length) {return false;}
 
-			if(nodeKey != sha3(rlpNode[i])) {
-		    	return false;
-		  	}
-		  	if(pathPtr > path.length){
-		    	return false
-		  	}
+	    	currentNode = RLP.toBytes(stack[i]);
+	    	if(nodeKey != sha3(currentNode)) {return false;}
+			currentNodeList = RLP.toList(stack[i]);
 
-	      	if(currentNodeValues.length == 17) {
+	      	if(currentNodeList.length == 17) {
 	          	if(pathPtr == path.length) {
-	            	if(RLP.toBytes(currentNodeValues[16]) == value) {
+	            	if(sha3(RLP.toBytes(currentNodeList[16])) == sha3(value)) {
 	              		return true;
 	            	} else {
 	              		return false;
 	            	}
 	          	}
-	          	uint8 nextPathNibble = getNthNibbleOfBytes(pathPtr,path);
-	          	nodeKey = RLP.toBytes32(currentNodeValues[nextPathNibble]);
-	          	pathPtr += 1;
-	       	} else if(currentNodeValues.length == 2) {
-	       		if(nibblesToTraverse(RLP.toData(currentNodeValues[0]), path, pathPtr)==0) {
-	       			return false;
-	       		}
 
-	        	pathPtr += nibblesToTraverse(RLP.toData(currentNodeValues[0]), path, pathPtr);
+	          	uint8 nextPathNibble = getNthNibbleOfBytes(pathPtr,path);
+	          	nodeKey = RLP.toBytes32(currentNodeList[nextPathNibble]);
+	          	pathPtr += 1;
+	       	} else if(currentNodeList.length == 2) {
+				pathPtr += nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr);
 	          	
 	          	if(pathPtr == path.length) {//leaf node
-		            if(RLP.toBytes(currentNodeValues[1]) == value) {
+		            if(sha3(RLP.toBytes(currentNodeList[1])) == sha3(value)) {
 		              	return true;
 		            } else {
 		              	return false;
 		            }
-	          	} else {//extension node
-	            	nodeKey = RLP.toBytes32(currentNodeValues[1]);
 	          	}
+	          	//extension node
+          		if(nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
+       				return false;
+       			}
+
+				nodeKey = RLP.toBytes32(currentNodeList[1]);
 	        } else {
 	        	return false;
 	        }
@@ -173,6 +175,9 @@ contract rbrelay {
 	}
 
 	function nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) returns (uint) {
+		// encodedPartialPath has elements that are each two hex characters (1 byte), but partialPath
+		// and slicedPath have elements that are each one hex character (1 nibble)
+
 		bytes partialPath;
 		bytes slicedPath;
 
@@ -181,22 +186,20 @@ contract rbrelay {
 			partialPath.push(byte(getNthNibbleOfBytes(1,encodedPartialPath)));
 		}
 
+		// encodedPartialPath.length is a number of bytes
 		for(uint i=1; i<encodedPartialPath.length; i++) {
 			partialPath.push(byte(getNthNibbleOfBytes(2*i,encodedPartialPath)));
 			partialPath.push(byte(getNthNibbleOfBytes(2*i+1,encodedPartialPath)));
-
-			if(i>pathPtr && i) {
-				slicedPath.push(byte(getNthNibbleOfBytes(2*i,path)));
-				slicedPath.push(byte(getNthNibbleOfBytes(2*i+1,path)));
-			}
 		}
 
+		// pathPtr counts nibbles in path
+		// partialPath.length is a number of nibbles
 		for(i=pathPtr+1; i<=pathPtr+partialPath.length; i++) {
-
+			slicedPath.push(byte(getNthNibbleOfBytes(i,path)));
 		}
 
-		if(partialPath == slicedPath  path.slice(pathPtr, pathPtr + partialPath.length)) {
-			return hpNibble==0||hpNibble==2 ? partialPath.length : partialPath.length-1;
+		if(sha3(partialPath) == sha3(slicedPath)) {
+			return partialPath.length;
 		} else {
 			return 0;
 		}
@@ -204,5 +207,9 @@ contract rbrelay {
 
 	function getNthNibbleOfBytes(uint n, bytes str) returns (uint8) {
 		return n%2==0 ? uint8(str[n])/0x10 : uint8(str[n])%0x10;
+	}
+
+	function truth() constant returns (bool) {
+		return true;
 	}
 }
