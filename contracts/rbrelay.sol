@@ -85,6 +85,7 @@ contract rbrelay {
 		return false;
 	}
 
+	// rawTx and stack are rlp encoded
 	function relayTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash, address targetAddr) {
 		bytes32 txHash = verifyTx(rawTx,txIndex,stack,blockHash);
 		require(txHash != 0x0);
@@ -111,21 +112,8 @@ contract rbrelay {
 
 	// value and rlpStack are rlp encoded
 	function verifyMerkleProof(bytes value, bytes path, bytes rlpStack, bytes32 root) constant returns (bool) {
-		// RLP.RLPItem[][] valueInNode;
-
 		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
         RLP.RLPItem[] memory stack = RLP.toList(item);
-        // for(uint i=0; i<s.length; i++) {
-        // 	valueInNode.push(RLP.toList(s[i]));
-        // }
-
-        /*
-			copy type struct RLPItem memory[] memory to storage:
-			s is type RLPItem[] memory
-			s[i] is type RLPItem memory
-			toList(s[i]) is type RLPItem[] memory
-        */
-
 
 		bytes memory currentNode;
 		RLP.RLPItem[] memory currentNodeList;
@@ -206,7 +194,7 @@ contract rbrelay {
 	}
 
 	function getNthNibbleOfBytes(uint n, bytes str) returns (uint8) {
-		return n%2==0 ? uint8(str[n])/0x10 : uint8(str[n])%0x10;
+		return n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10;
 	}
 
 	function truth() constant returns (bool) {
