@@ -112,7 +112,7 @@ contract rbrelay {
 // 	}
 
 	// value and rlpStack are rlp encoded
-	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) returns (uint) {
+	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) returns (bool) {
 		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
         RLP.RLPItem[] memory stack = RLP.toList(item);
 
@@ -123,47 +123,48 @@ contract rbrelay {
 	    uint pathPtr = 0;
 
 	    bytes memory path = getNibbleArray(encodedPath);
+	    if(path.length == 0) {return false;}
 	    
 	    for (uint i=0; i<stack.length; i++) {
-	    	if(pathPtr > path.length) {return 4;}
+	    	if(pathPtr > path.length) {return false;}
 
 	    	currentNode = RLP.toBytes(stack[i]);
-	    	if(nodeKey != sha3(currentNode)) {return 8;}
+	    	if(nodeKey != sha3(currentNode)) {return false;}
 			currentNodeList = RLP.toList(stack[i]);
 
 	      	if(currentNodeList.length == 17) {
 	          	if(pathPtr == path.length) {
 	            	if(sha3(RLP.toBytes(currentNodeList[16])) == sha3(value)) {
-	              		return 10;
+	              		return true;
 	            	} else {
-	              		return 5;
+	              		return false;
 	            	}
 	          	}
 
 	          	uint8 nextPathNibble = uint8(path[pathPtr]);
+	          	if(nextPathNibble > 16) {return false;}
 	          	nodeKey = RLP.toBytes32(currentNodeList[nextPathNibble]);
 	          	pathPtr += 1;
 	       	} else if(currentNodeList.length == 2) {
 				pathPtr += nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr);
 	          	
 	          	if(pathPtr == path.length) {//leaf node
-		            if(sha3(RLP.toBytes(currentNodeList[1])) == sha3(value)) {
-		              	return 10;
+		            if(sha3(RLP.toData(currentNodeList[1])) == sha3(value)) {
+		              	return true;
 		            } else {
-		              	return 6;
+		              	return false;
 		            }
 	          	}
 	          	//extension node
           		if(nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
-      				return 2;
+      				return false;
       			}
 
 				nodeKey = RLP.toBytes32(currentNodeList[1]);
 	        } else {
-	        	return 3;
+	        	return false;
 	        }
 	    }
-	    return 11;
 	}
     
     bytes partialPath;
@@ -196,15 +197,17 @@ contract rbrelay {
 	bytes nibbles;
 	// bytes b must be hp encoded
 	function getNibbleArray(bytes b) returns (bytes) {
-	    uint8 hpNibble = uint8(getNthNibbleOfBytes(0,b));
-		if(hpNibble == 1 || hpNibble == 3) {
-		    byte oddNibble = getNthNibbleOfBytes(1,b);
-			nibbles.push(oddNibble);
-		}
+		if(b.length>0) {
+		    uint8 hpNibble = uint8(getNthNibbleOfBytes(0,b));
+			if(hpNibble == 1 || hpNibble == 3) {
+			    byte oddNibble = getNthNibbleOfBytes(1,b);
+				nibbles.push(oddNibble);
+			}
 
-		for(uint i=1; i<b.length; i++) {
-			nibbles.push(getNthNibbleOfBytes(2*i,b));
-			nibbles.push(getNthNibbleOfBytes(2*i+1,b));
+			for(uint i=1; i<b.length; i++) {
+				nibbles.push(getNthNibbleOfBytes(2*i,b));
+				nibbles.push(getNthNibbleOfBytes(2*i+1,b));
+			}
 		}
 		return nibbles;
 
