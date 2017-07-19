@@ -150,7 +150,7 @@ contract rbrelay {
 		            if(sha3(RLP.toBytes(currentNodeList[1])) == sha3(value)) {
 		              	return 10;
 		            } else {
-		              	return uint(sha3(RLP.toBytes(currentNodeList[1])));
+		              	return 6;
 		            }
 	          	}
 	          	//extension node
@@ -196,22 +196,22 @@ contract rbrelay {
 	bytes nibbles;
 	// bytes b must be hp encoded
 	function getNibbleArray(bytes b) returns (bytes) {
-	    uint8 hpNibble = getNthNibbleOfBytes(0,b);
+	    uint8 hpNibble = uint8(getNthNibbleOfBytes(0,b));
 		if(hpNibble == 1 || hpNibble == 3) {
-		    byte oddNibble = byte(getNthNibbleOfBytes(1,b));
+		    byte oddNibble = getNthNibbleOfBytes(1,b);
 			nibbles.push(oddNibble);
 		}
 
 		for(uint i=1; i<b.length; i++) {
-			nibbles.push(byte(getNthNibbleOfBytes(2*i,b)));
-			nibbles.push(byte(getNthNibbleOfBytes(2*i+1,b)));
+			nibbles.push(getNthNibbleOfBytes(2*i,b));
+			nibbles.push(getNthNibbleOfBytes(2*i+1,b));
 		}
 		return nibbles;
 
 		nibbles.length = 0;
 	}
 
-	function getNthNibbleOfBytes(uint n, bytes str) returns (uint8) {
-		return n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10;
+	function getNthNibbleOfBytes(uint n, bytes str) returns (byte) {
+		return byte(n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10);
 	}
 }
