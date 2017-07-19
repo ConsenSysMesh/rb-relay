@@ -96,14 +96,3 @@ contract('rbrelay', function(accounts) {
     })
   })
 })
-
-// function hexToBytes(hex) {
-//   hex = hex.slice(2);
-//   if(hex.length%2!=0) { hex = '0'+hex }
-
-//   var bytes = []
-//     for (var i = 0; i < hex.length/2; i++) {
-//       bytes.push("\"0x"+hex.slice(2*i,2*i+2)+"\"");
-//     }
-//     return bytes;
-// }
