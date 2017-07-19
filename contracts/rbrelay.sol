@@ -1,6 +1,7 @@
 pragma solidity ^0.4.11;
 
 import "./RLP.sol";
+import "./MerklePatriciaProof.sol";
 
 // contract Target {
 // 	function processTransaction(bytes rawTx, bytes32 txHash) {}
