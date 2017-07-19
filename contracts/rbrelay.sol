@@ -1,25 +1,25 @@
-pragma solidity ^0.4.13;
+pragma solidity ^0.4.11;
 
 import "./RLP.sol";
 
-contract Target {
-	function processTransaction(bytes rawTx, bytes32 txHash) {}
-}
+// contract Target {
+// 	function processTransaction(bytes rawTx, bytes32 txHash) {}
+// }
 
 contract rbrelay {
-	mapping(bytes32=>header) public rbchain;
+	//mapping(bytes32=>header) public rbchain;
 
 // 	uint public latest;
 // 	mapping(address=>bool) isSigner;
 
-	struct header {
-		bytes32 parentHash;
-		bytes32 stateRoot;
-		bytes32 transactionsRoot;
-// 		bool False; // worst bug fix ever - take this out and switch to solc 0.4.13
-		bytes32 receiptsRoot;
-		uint blockNumber;
-	}
+// 	struct header {
+// 		bytes32 parentHash;
+// 		bytes32 stateRoot;
+// 		bytes32 transactionsRoot;
+// // 		bool False; // worst bug fix ever - take this out and switch to solc 0.4.13
+// 		bytes32 receiptsRoot;
+// 		uint blockNumber;
+// 	}
     
 // 	function rbrelayInit() {
 // 	    bytes32 genesisHash = 0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177;
@@ -112,7 +112,7 @@ contract rbrelay {
 // 	}
 
 	// value and rlpStack are rlp encoded
-	function verifyMerkleProof(bytes value, bytes path, bytes rlpStack, bytes32 root) constant returns (bool) {
+	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) returns (uint) {
 		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
         RLP.RLPItem[] memory stack = RLP.toList(item);
 
@@ -121,24 +121,26 @@ contract rbrelay {
 	    
 	    bytes32 nodeKey = root;
 	    uint pathPtr = 0;
+
+	    bytes memory path = getNibbleArray(encodedPath);
 	    
 	    for (uint i=0; i<stack.length; i++) {
-	    	if(pathPtr > path.length) {return false;}
+	    	if(pathPtr > path.length) {return 4;}
 
 	    	currentNode = RLP.toBytes(stack[i]);
-	    	if(nodeKey != sha3(currentNode)) {return false;}
+	    	if(nodeKey != sha3(currentNode)) {return 8;}
 			currentNodeList = RLP.toList(stack[i]);
 
 	      	if(currentNodeList.length == 17) {
 	          	if(pathPtr == path.length) {
 	            	if(sha3(RLP.toBytes(currentNodeList[16])) == sha3(value)) {
-	              		return true;
+	              		return 10;
 	            	} else {
-	              		return false;
+	              		return 5;
 	            	}
 	          	}
 
-	          	uint8 nextPathNibble = getNthNibbleOfBytes(pathPtr,path);
+	          	uint8 nextPathNibble = uint8(path[pathPtr]);
 	          	nodeKey = RLP.toBytes32(currentNodeList[nextPathNibble]);
 	          	pathPtr += 1;
 	       	} else if(currentNodeList.length == 2) {
@@ -146,21 +148,22 @@ contract rbrelay {
 	          	
 	          	if(pathPtr == path.length) {//leaf node
 		            if(sha3(RLP.toBytes(currentNodeList[1])) == sha3(value)) {
-		              	return true;
+		              	return 10;
 		            } else {
-		              	return false;
+		              	return uint(sha3(RLP.toBytes(currentNodeList[1])));
 		            }
 	          	}
 	          	//extension node
           		if(nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
-      				return false;
+      				return 2;
       			}
 
 				nodeKey = RLP.toBytes32(currentNodeList[1]);
 	        } else {
-	        	return false;
+	        	return 3;
 	        }
 	    }
+	    return 11;
 	}
     
     bytes partialPath;
@@ -169,26 +172,13 @@ contract rbrelay {
 		// encodedPartialPath has elements that are each two hex characters (1 byte), but partialPath
 		// and slicedPath have elements that are each one hex character (1 nibble)
 
-// 		bytes partialPath;
-// 		bytes slicedPath;
-
-		uint8 hpNibble = getNthNibbleOfBytes(0,encodedPartialPath);
-		if(hpNibble == 1 || hpNibble == 3) {
-		    byte oddNibble = byte(getNthNibbleOfBytes(1,encodedPartialPath));
-			partialPath.push(oddNibble);
-		}
-
-		// encodedPartialPath.length is a number of bytes
-		for(uint i=1; i<encodedPartialPath.length; i++) {
-			partialPath.push(byte(getNthNibbleOfBytes(2*i,encodedPartialPath)));
-			partialPath.push(byte(getNthNibbleOfBytes(2*i+1,encodedPartialPath)));
-		}
+		partialPath = getNibbleArray(encodedPartialPath);
 
 		// pathPtr counts nibbles in path
 		// partialPath.length is a number of nibbles
-		if(pathPtr+partialPath.length <= path.length*2-1) {
-    		for(i=pathPtr+1; i<=pathPtr+partialPath.length; i++) {
-    		    byte pathNibble = byte(getNthNibbleOfBytes(i,path));
+		if(pathPtr+partialPath.length < path.length) {
+    		for(uint i=pathPtr+1; i<=pathPtr+partialPath.length; i++) {
+    		    byte pathNibble = path[i];
     			slicedPath.push(pathNibble);
     		}
 		}
@@ -203,11 +193,25 @@ contract rbrelay {
 		slicedPath.length = 0;
 	}
 
-	function getNthNibbleOfBytes(uint n, bytes str) returns (uint8) {
-		return n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10;
+	bytes nibbles;
+	// bytes b must be hp encoded
+	function getNibbleArray(bytes b) returns (bytes) {
+	    uint8 hpNibble = getNthNibbleOfBytes(0,b);
+		if(hpNibble == 1 || hpNibble == 3) {
+		    byte oddNibble = byte(getNthNibbleOfBytes(1,b));
+			nibbles.push(oddNibble);
+		}
+
+		for(uint i=1; i<b.length; i++) {
+			nibbles.push(byte(getNthNibbleOfBytes(2*i,b)));
+			nibbles.push(byte(getNthNibbleOfBytes(2*i+1,b)));
+		}
+		return nibbles;
+
+		nibbles.length = 0;
 	}
 
-	function truth() constant returns (bool) {
-		return true;
+	function getNthNibbleOfBytes(uint n, bytes str) returns (uint8) {
+		return n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10;
 	}
 }
