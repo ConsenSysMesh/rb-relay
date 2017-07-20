@@ -59,7 +59,7 @@ library MerklePatriciaProof {
 	    }
 	}
     
-	function nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) internal constant returns (uint) {
+	function nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) private constant returns (uint) {
 		uint len;
 		// encodedPartialPath has elements that are each two hex characters (1 byte), but partialPath
 		// and slicedPath have elements that are each one hex character (1 nibble)
@@ -84,7 +84,7 @@ library MerklePatriciaProof {
 	}
 
 	// bytes b must be hp encoded
-	function getNibbleArray(bytes b) internal constant returns (bytes) {
+	function getNibbleArray(bytes b) private constant returns (bytes) {
 	    bytes memory nibbles;
 		if(b.length>0) {
 		    uint8 offset;
@@ -106,7 +106,7 @@ library MerklePatriciaProof {
 		return nibbles;
 	}
 
-	function getNthNibbleOfBytes(uint n, bytes str) internal constant returns (byte) {
+	function getNthNibbleOfBytes(uint n, bytes str) private constant returns (byte) {
 		return byte(n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10);
 	}
 }
