@@ -1,10 +1,10 @@
 const Web3 = require(`web3`);
-var contract = require("truffle-contract");
-var rlp = require('rlp');
-var utils = require('ethereumjs-util')
-var fs = require('fs');
-var asyncLoop = require('node-async-loop');
-var HDWalletProvider = require("truffle-hdwallet-provider");
+const contract = require("truffle-contract");
+const rlp = require('rlp');
+const utils = require('ethereumjs-util')
+const fs = require('fs');
+const asyncLoop = require('node-async-loop');
+const HDWalletProvider = require("truffle-hdwallet-provider");
 
 var secrets;
 var mnemonic;
