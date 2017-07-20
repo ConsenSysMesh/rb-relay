@@ -4,7 +4,7 @@ import "./RLP.sol";
 
 library MerklePatriciaProof {
 	// value and rlpStack are rlp encoded
-	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) internal returns (bool) {
+	function verifyProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) internal constant returns (bool) {
 		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
         RLP.RLPItem[] memory stack = RLP.toList(item);
 
@@ -59,18 +59,19 @@ library MerklePatriciaProof {
 	    }
 	}
     
-	function nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) internal returns (uint len) {
+	function nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) internal constant returns (uint) {
+		uint len;
 		// encodedPartialPath has elements that are each two hex characters (1 byte), but partialPath
 		// and slicedPath have elements that are each one hex character (1 nibble)
-        bytes partialPath = getNibbleArray(encodedPartialPath);
-        bytes slicedPath;
+        bytes memory partialPath = getNibbleArray(encodedPartialPath);
+        bytes memory slicedPath = new bytes(partialPath.length);
 
 		// pathPtr counts nibbles in path
 		// partialPath.length is a number of nibbles
 		if(pathPtr+partialPath.length < path.length) {
     		for(uint i=pathPtr+1; i<=pathPtr+partialPath.length; i++) {
     		    byte pathNibble = path[i];
-    			slicedPath.push(pathNibble);
+    			slicedPath[i-pathPtr-1] = pathNibble;
     		}
 		}
 
@@ -79,33 +80,33 @@ library MerklePatriciaProof {
 		} else {
 			len = 0;
 		}
-		
-		partialPath.length = 0;
-		slicedPath.length = 0;
+		return len;
 	}
 
-	// bytes nibbles;
 	// bytes b must be hp encoded
-	function getNibbleArray(bytes b) internal returns (bytes storage) {
-	    bytes nibbles;
+	function getNibbleArray(bytes b) internal constant returns (bytes) {
+	    bytes memory nibbles;
 		if(b.length>0) {
+		    uint8 offset;
 		    uint8 hpNibble = uint8(getNthNibbleOfBytes(0,b));
 			if(hpNibble == 1 || hpNibble == 3) {
+			    nibbles = new bytes(b.length*2-1);
 			    byte oddNibble = getNthNibbleOfBytes(1,b);
-				nibbles.push(oddNibble);
+				nibbles[0] = oddNibble;
+				offset = 1;
+			} else {
+			    nibbles = new bytes(b.length*2-2);
+			    offset = 0;
 			}
 
-			for(uint i=1; i<b.length; i++) {
-				nibbles.push(getNthNibbleOfBytes(2*i,b));
-				nibbles.push(getNthNibbleOfBytes(2*i+1,b));
+			for(uint i=offset; i<nibbles.length; i++) {
+				nibbles[i] = getNthNibbleOfBytes(i-offset+2,b);
 			}
 		}
 		return nibbles;
-
-		nibbles.length = 0;
 	}
 
-	function getNthNibbleOfBytes(uint n, bytes str) internal returns (byte) {
+	function getNthNibbleOfBytes(uint n, bytes str) internal constant returns (byte) {
 		return byte(n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10);
 	}
 }
