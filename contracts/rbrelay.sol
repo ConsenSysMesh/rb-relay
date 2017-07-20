@@ -57,17 +57,17 @@ contract rbrelay {
 		isSigner[0xB279182D99E65703F0076E4812653aaB85FCA0f0] = true;
 	}
 
-	function storeBlockHeader(bytes headerBytes, bytes32 r, bytes32 s, uint8 v, bytes32 blockHash, bytes proofOfHash) {
-		var (h, rlpNonce, unsignedHash) = parseBlockHeader(headerBytes);
+	function storeBlockHeader(bytes headerBytes, bytes32 r, bytes32 s, uint8 v) {
+		var (h, blockHash, unsignedHash) = parseBlockHeader(headerBytes);
 
-		require(verifyHeader(h.parentHash, unsignedHash, r, s, v, blockHash, proofOfHash, rlpNonce));
+		require(verifyHeader(h.parentHash, unsignedHash, r, s, v));
 
 		rbchain[blockHash] = h;
 
 		latest = h.blockNumber;
 	}
 
-	function parseBlockHeader(bytes headerBytes) internal returns (header, bytes, bytes32) 
+	function parseBlockHeader(bytes headerBytes) internal returns (header, bytes32, bytes32) 
 	{
 		RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
         RLP.RLPItem[] memory rlpH = RLP.toList(item);
@@ -80,28 +80,19 @@ contract rbrelay {
 		h.receiptsRoot = RLP.toBytes32(rlpH[5]);
 		h.blockNumber = RLP.toUint(rlpH[8]);
 
-		bytes memory rlpNonce = RLP.toBytes(rlpH[14]);
-
+		bytes32 blockHash;
 		bytes32 unsignedHash = sha3(headerBytes);
 
-		return (h, rlpNonce, unsignedHash);
+		return (h, blockHash, unsignedHash);
 	}
     
-	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 r, bytes32 s, uint8 v, bytes32 blockHash, bytes proofOfHash, bytes nonce) returns (bool) {
+	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 r, bytes32 s, uint8 v) returns (bool) {
 	    if(rbchain[parentHash].stateRoot==0x0) {return false;}
 
 		address miner = ecrecover(unsignedHash,v,r,s);
 		if(isSigner[miner]) {
 			return false;
 		}
-
-		if(nonce[0] != byte(0x88)) {return false;}
-
-		bytes memory fullHeader = proofOfHash;
-		for(uint i=0; i<nonce.length; i++) {
-			fullHeader[i+proofOfHash.length] = nonce[i];
-		}
-		if(sha3(fullHeader) != blockHash) {return false;}
 
 		return true;
 	}
