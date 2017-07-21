@@ -1,6 +1,7 @@
 pragma solidity ^0.4.11;
 
 import "./RLP.sol";
+import "./rlpEncode.sol";
 import "./MerklePatriciaProof.sol";
 
 contract Target {
@@ -57,34 +58,74 @@ contract rbrelay {
 		isSigner[0xB279182D99E65703F0076E4812653aaB85FCA0f0] = true;
 	}
 
-	function storeBlockHeader(bytes headerBytes, bytes32 r, bytes32 s, uint8 v) {
-		var (h, blockHash, unsignedHash) = parseBlockHeader(headerBytes);
+	// function storeBlockHeader(bytes headerBytes) {
+	// 	var (h, unsignedHash, blockHash, r, s, v) = parseBlockHeader(headerBytes);
 
-		require(verifyHeader(h.parentHash, unsignedHash, r, s, v));
+	// 	require(verifyHeader(h.parentHash, unsignedHash, r, s, v));
 
-		rbchain[blockHash] = h;
+	// 	rbchain[blockHash] = h;
 
-		latest = h.blockNumber;
-	}
+	// 	latest = h.blockNumber;
+	// }
 
-	function parseBlockHeader(bytes headerBytes) internal returns (header, bytes32, bytes32) 
-	{
-		RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
+	// function parseBlockHeader(bytes headerBytes) internal returns (header, bytes32, bytes32, bytes32, bytes32, uint8) {
+	// 	RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
+ //        RLP.RLPItem[] memory rlpH = RLP.toList(item);
+
+ //        header h;
+
+	// 	h.parentHash = RLP.toBytes32(rlpH[0]);
+	// 	h.stateRoot = RLP.toBytes32(rlpH[3]);
+	// 	h.transactionsRoot = RLP.toBytes32(rlpH[4]);
+	// 	h.receiptsRoot = RLP.toBytes32(rlpH[5]);
+	// 	h.blockNumber = RLP.toUint(rlpH[8]);
+
+	// 	bytes32 blockHash = sha3(headerBytes);
+
+	// 	bytes32 r;
+	// 	bytes32 s;
+	// 	uint8 v;
+	// 	bytes32 unsignedHash = constructUnsignedHash(headerBytes);
+
+	// 	return (h, unsignedHash, blockHash, r, s, v);
+	// }
+
+	function constructUnsignedHash(bytes headerBytes) constant returns (bytes) {
+        RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
         RLP.RLPItem[] memory rlpH = RLP.toList(item);
-
-        header h;
-
-		h.parentHash = RLP.toBytes32(rlpH[0]);
-		h.stateRoot = RLP.toBytes32(rlpH[3]);
-		h.transactionsRoot = RLP.toBytes32(rlpH[4]);
-		h.receiptsRoot = RLP.toBytes32(rlpH[5]);
-		h.blockNumber = RLP.toUint(rlpH[8]);
-
-		bytes32 blockHash;
-		bytes32 unsignedHash = sha3(headerBytes);
-
-		return (h, blockHash, unsignedHash);
-	}
+        bytes[] unsignedHeader;
+//      bytes32 r;
+// 		bytes32 s;
+// 		uint8 v;
+        
+        for(uint i=0; i<rlpH.length; i++) {
+            bytes memory headerItem;
+            if(i == 12) {
+                // bytes memory signedExtraData = RLP.toData(rlpH[i]);
+                // uint initLen = headerBytes.length - 65;
+                // bytes memory decodedHeaderItem = new bytes(initLen);
+                // for (uint j = 0; j<decodedHeaderItem.length; j++) {
+                //     decodedHeaderItem[j] = signedExtraData[j];
+                // }
+                headerItem = rlpEncode.encodeString(decodedHeaderItem);
+        
+        // 		uint OFFSET = 0x20 + initLen;
+        // 		assembly {
+        //  			r := mload(add(signedExtraData,OFFSET))
+        // 			OFFSET := add(OFFSET,0x20)
+        // 			s := mload(add(signedExtraData,OFFSET))
+        // 			OFFSET := add(OFFSET,0x20)
+        // 			v := mload(add(signedExtraData,OFFSET))
+        // 		}
+            } else {
+                headerItem = RLP.toBytes(rlpH[i]);
+            }
+            unsignedHeader.push(headerItem);
+        }
+        //bytes memory rlpUnsignedHeader = rlpEncode.encodeList(unsignedHeader);
+        //bytes32 unsignedHash = sha3(rlpUnsignedHeader);
+        return unsignedHeader[0];
+    }
     
 	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 r, bytes32 s, uint8 v) returns (bool) {
 	    if(rbchain[parentHash].stateRoot==0x0) {return false;}
@@ -107,7 +148,7 @@ contract rbrelay {
 	}
 
 	// rawTx and stack are rlp encoded
-	function verifyTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash) returns (bytes32) {
+	function verifyTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash) constant returns (bytes32) {
 		header h = rbchain[blockHash];
 		if(h.transactionsRoot == 0x0) {
 			return 0x0;
@@ -115,14 +156,14 @@ contract rbrelay {
 
 		bytes32 txRoot = h.transactionsRoot;
 
-		require(MerklePatriciaProof.verifyProof(rawTx, txIndex, stack, txRoot));
+		require(verifyMerkleProof(rawTx, txIndex, stack, txRoot));
 
 		/*
 			compute and return txHash
 		*/
 	}
 
-	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) returns (bool) {
+	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) constant returns (bool) {
 		return MerklePatriciaProof.verifyProof(value, encodedPath, rlpStack, root);
 	}
 }

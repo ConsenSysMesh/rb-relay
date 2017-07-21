@@ -53,14 +53,14 @@ if(block != null) {
 		unsignedBlockBytes.push(fieldBuf);
 	}
 	// console.log(unsignedBlockBytes);
-	var encoded = '0x'+rlp.encode(unsignedBlockBytes).toString('hex')
+	var encoded = '0x'+rlp.encode(blockBytes).toString('hex')
 	var unsignedHash = "0x" + utils.sha3(rlp.encode(unsignedBlockBytes)).toString('hex');
-	var blockHash = "0x" + utils.sha3(rlp.encode(blockBytes)).toString('hex');
+	//var blockHash = "0x" + utils.sha3(rlp.encode(blockBytes)).toString('hex');
 
-	console.log(r);
-	console.log(unsignedHash);
-	console.log(encoded);
-	console.log("["+hexToBytes(encoded).toString()+"], \""+r+"\", \""+s+"\", "+v+", \""+blockHash+"\"");
+	//console.log(r);
+	console.log("unsigned hash: "+unsignedHash);
+	console.log("signed bytes: ["+hexToBytes(encoded).toString('hex')+']');
+	//console.log("["+hexToBytes(encoded).toString()+"], \""+r+"\", \""+s+"\", "+v+", \""+blockHash+"\"");
 }
 
 function hexToBytes(hex) {
