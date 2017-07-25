@@ -1,9 +1,21 @@
-pragma solidity ^0.4.11;
+/*
+ * @title MerklePatriciaVerifier
+ * @author Sam Mayo (sammayo888@gmail.com)
+ *
+ * @dev Library for verifing merkle patricia proofs.
+ */
 
 import "./RLP.sol";
 
 library MerklePatriciaProof {
-	// value and rlpStack are rlp encoded
+	/*
+     * @dev Verifies a merkle patricia proof.
+     * @param value The terminating value in the trie.
+     * @param encodedPath The path in the trie leading to value.
+     * @param rlpStack The rlp encoded stack of nodes.
+     * @param root The root hash of the trie.
+     * @return The boolean validity of the proof.
+     */
 	function verifyProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) internal constant returns (bool) {
 		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
         RLP.RLPItem[] memory stack = RLP.toList(item);
