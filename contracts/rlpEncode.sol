@@ -5,11 +5,7 @@
  * @dev Library for rlp encoding arbitrary bytes or lists.
  */
 
-import "./strings.sol";
-
 library rlpEncode {
-    using strings for *;
-
     /*
      * @dev Returns an rlp encoded string.
      * @param self The bytes to be encoded.
@@ -78,20 +74,61 @@ library rlpEncode {
     		len += self[i].length;
         }
 
-        strings.slice[] memory slices = new strings.slice[](len);
+        slice[] memory slices = new slice[](self.length);
         for(i=0; i<self.length; i++) {
-            slices[i] = string(self[i]).toSlice();
+            slices[i] = toSlice(self[i]);
         }
 
         bytes memory flattened = new bytes(len);
-
-        uint pointer;
+        uint flattenedPtr;
+        assembly { flattenedPtr := add(flattened, 0x20) }
         for(i=0; i<self.length; i++) {
-            for(uint j=0; j<self[i].length; j++) {
-                flattened[pointer] = self[i][j];
-                pointer++;
-            }
+            memcpy(flattenedPtr, slices[i]._ptr, slices[i]._len);
+            flattenedPtr += slices[i]._len;
         }
+
         return flattened;
+    }
+
+    /*
+     * String & slice utility library for Solidity contracts.
+     * @author Nick Johnson <arachnid@notdot.net>
+     */
+
+    struct slice {
+        uint _len;
+        uint _ptr;
+    }
+
+    function memcpy(uint dest, uint src, uint len) private {
+        // Copy word-length chunks while possible
+        for(; len >= 32; len -= 32) {
+            assembly {
+                mstore(dest, mload(src))
+            }
+            dest += 32;
+            src += 32;
+        }
+
+        // Copy remaining bytes
+        uint mask = 256 ** (32 - len) - 1;
+        assembly {
+            let srcpart := and(mload(src), not(mask))
+            let destpart := and(mload(dest), mask)
+            mstore(dest, or(destpart, srcpart))
+        }
+    }
+
+    /*
+     * @dev Returns a slice containing the entire string.
+     * @param self The string to make a slice from.
+     * @return A newly allocated slice containing the entire string.
+     */
+    function toSlice(bytes self) private returns (slice) {
+        uint ptr;
+        assembly {
+            ptr := add(self, 0x20)
+        }
+        return slice(self.length, ptr);
     }
 }

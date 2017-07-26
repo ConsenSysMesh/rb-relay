@@ -9,161 +9,154 @@ contract Target {
 }
 
 contract rbrelay {
-	mapping(bytes32=>header) public rbchain;
+	mapping(bytes32=>uint) public rbchain;
 
-	uint public latest;
+	bytes32 public head;
 	mapping(address=>bool) isSigner;
 
-	struct header {
-		bytes32 parentHash;
-		bytes32 stateRoot;
-		bytes32 transactionsRoot;
-		bytes32 receiptsRoot;
-		uint blockNumber;
-	}
-
-	function getParentHash(bytes32 blockHash) returns (bytes32) {
-		return rbchain[blockHash].parentHash;
-	}
-	function getStateRoot(bytes32 blockHash) returns (bytes32) {
-		return rbchain[blockHash].stateRoot;
-	}
-	function getTransactionsRoot(bytes32 blockHash) returns (bytes32) {
-		return rbchain[blockHash].transactionsRoot;
-	}
-	function getReceiptsRoot(bytes32 blockHash) returns (bytes32) {
-		return rbchain[blockHash].receiptsRoot;
-	}
 	function getBlockNumber(bytes32 blockHash) returns (uint) {
-		return rbchain[blockHash].blockNumber;
+		return rbchain[blockHash];
 	}
     
 	function rbrelay() {
-	    bytes32 genesisHash = 0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177;
+	    rbchain[0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177] = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 	    
-	    header genesis;
-	    
-	    genesis.parentHash = 0x0;
-	    genesis.stateRoot = 0x53580584816f617295ea26c0e17641e0120cab2f0a8ffb53a866fd53aa8e8c2d;
-	    genesis.transactionsRoot = 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421;
-		genesis.receiptsRoot = 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421;
-		genesis.blockNumber = 0;
-		
-		rbchain[genesisHash] = genesis;
-		
-		latest = 0;
+	    // head == second block hash
+	    head = 0xa7684ac44d48494670b2e0d9085b7750e7341620f0a271db146ed5e70c1db854;
+	    rbchain[head] = 1;
 
 		isSigner[0x42EB768f2244C8811C63729A21A3569731535f06] = true;
 		isSigner[0x7ffC57839B00206D1ad20c69A1981b489f772031] = true;
 		isSigner[0xB279182D99E65703F0076E4812653aaB85FCA0f0] = true;
 	}
 
-	// function storeBlockHeader(bytes headerBytes) {
-	// 	var (h, unsignedHash, blockHash, r, s, v) = parseBlockHeader(headerBytes);
+	function storeBlockHeader(bytes headerBytes) {
+		var (parentHash, blockNumber, unsignedHash, blockHash, r, s, v) = parseBlockHeader(headerBytes);
 
-	// 	require(verifyHeader(h.parentHash, unsignedHash, r, s, v));
+		require(verifyHeader(parentHash, unsignedHash, blockHash, r, s, v));
 
-	// 	rbchain[blockHash] = h;
+		rbchain[blockHash] = blockNumber;
 
-	// 	latest = h.blockNumber;
-	// }
+		if(blockNumber > rbchain[parentHash]) {
+			head = blockHash;
+		}
+	}
 
-	// function parseBlockHeader(bytes headerBytes) internal returns (header, bytes32, bytes32, bytes32, bytes32, uint8) {
-	// 	RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
- //        RLP.RLPItem[] memory rlpH = RLP.toList(item);
+	function parseBlockHeader(bytes headerBytes) constant returns (bytes32 parentHash, uint blockNumber, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) {
+        RLP.RLPItem[] memory rlpH = RLP.toList(RLP.toRLPItem(headerBytes));
 
- //        header h;
+        parentHash = RLP.toBytes32(rlpH[0]);
+        blockNumber = RLP.toUint(rlpH[8]);
+        unsignedHash = constructUnsignedHash(headerBytes);
+		blockHash = sha3(headerBytes);
+		bytes memory extraData = RLP.toData(rlpH[12]);
+		(r, s, v) = getSignature(extraData);
+	}
 
-	// 	h.parentHash = RLP.toBytes32(rlpH[0]);
-	// 	h.stateRoot = RLP.toBytes32(rlpH[3]);
-	// 	h.transactionsRoot = RLP.toBytes32(rlpH[4]);
-	// 	h.receiptsRoot = RLP.toBytes32(rlpH[5]);
-	// 	h.blockNumber = RLP.toUint(rlpH[8]);
-
-	// 	bytes32 blockHash = sha3(headerBytes);
-
-	// 	bytes32 r;
-	// 	bytes32 s;
-	// 	uint8 v;
-	// 	bytes32 unsignedHash = constructUnsignedHash(headerBytes);
-
-	// 	return (h, unsignedHash, blockHash, r, s, v);
-	// }
-
-	function constructUnsignedHash(bytes headerBytes) constant returns (bytes) {
+	function constructUnsignedHash(bytes memory headerBytes) constant returns (bytes32) {
         RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
         RLP.RLPItem[] memory rlpH = RLP.toList(item);
-        bytes[] unsignedHeader;
-//      bytes32 r;
-// 		bytes32 s;
-// 		uint8 v;
+        bytes[] memory unsignedHeader = new bytes[](15);
         
         for(uint i=0; i<rlpH.length; i++) {
             bytes memory headerItem;
             if(i == 12) {
-                // bytes memory signedExtraData = RLP.toData(rlpH[i]);
-                // uint initLen = headerBytes.length - 65;
-                // bytes memory decodedHeaderItem = new bytes(initLen);
-                // for (uint j = 0; j<decodedHeaderItem.length; j++) {
-                //     decodedHeaderItem[j] = signedExtraData[j];
+                bytes memory signedExtraData = RLP.toData(rlpH[i]);
+                uint initLen = signedExtraData.length - 65;
+                bytes memory unsignedExtraData = new bytes(initLen);
+                for(uint j = 0; j<initLen; j++) {
+                    unsignedExtraData[j] = signedExtraData[j];
+                }
+
+                // the following saves 8780 gas:
+                // uint uPtr;
+                // uint sPtr;
+                // assembly {
+                // 	uPtr := add(unsignedExtraData,0x20)
+                // 	sPtr := add(signedExtraData,0x20)
                 // }
-                headerItem = rlpEncode.encodeString(decodedHeaderItem);
-        
-        // 		uint OFFSET = 0x20 + initLen;
-        // 		assembly {
-        //  			r := mload(add(signedExtraData,OFFSET))
-        // 			OFFSET := add(OFFSET,0x20)
-        // 			s := mload(add(signedExtraData,OFFSET))
-        // 			OFFSET := add(OFFSET,0x20)
-        // 			v := mload(add(signedExtraData,OFFSET))
-        // 		}
+                // memcpy(uPtr, sPtr, initLen);
+
+                headerItem = rlpEncode.encodeBytes(unsignedExtraData);
             } else {
                 headerItem = RLP.toBytes(rlpH[i]);
             }
-            unsignedHeader.push(headerItem);
+            unsignedHeader[i] = headerItem;
         }
-        //bytes memory rlpUnsignedHeader = rlpEncode.encodeList(unsignedHeader);
-        //bytes32 unsignedHash = sha3(rlpUnsignedHeader);
-        return unsignedHeader[0];
+        bytes memory rlpUnsignedHeader = rlpEncode.encodeList(unsignedHeader);
+        bytes32 unsignedHash = sha3(rlpUnsignedHeader);
+        return unsignedHash;
     }
     
-	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 r, bytes32 s, uint8 v) returns (bool) {
-	    if(rbchain[parentHash].stateRoot==0x0) {return false;}
+    function getSignature(bytes memory signedExtraData) internal constant returns (bytes32 r, bytes32 s, uint8 v) {
+		uint vWord;
+		uint OFFSET = 0x20 + signedExtraData.length - 65;
+		assembly {
+ 			r := mload(add(signedExtraData,OFFSET))
+			OFFSET := add(OFFSET,0x20)
+			s := mload(add(signedExtraData,OFFSET))
+			OFFSET := add(OFFSET,0x1)
+			vWord := and(mload(add(signedExtraData,OFFSET)),0xff)
+		}
+		v = uint8(vWord)+27;
+	}
+
+	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v)  returns (bool) {
+	    if(rbchain[parentHash] == 0) {return false;}
+	    if(rbchain[blockHash] != 0) {return false;}
 
 		address miner = ecrecover(unsignedHash,v,r,s);
-		if(isSigner[miner]) {
+		if(!isSigner[miner]) {
 			return false;
 		}
 
 		return true;
 	}
 
-	// rawTx and stack are rlp encoded
-	function relayTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash, address targetAddr) {
-		bytes32 txHash = verifyTx(rawTx,txIndex,stack,blockHash);
+	// rawTx and parentNodes are rlp encoded
+	function relayTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes32 blockHash, bytes headerBytes, address targetAddr) {
+		bytes32 txHash = verifyTx(rawTx, txIndex, parentNodes, blockHash, headerBytes);
 		require(txHash != 0x0);
 
 		Target t = Target(targetAddr);
 		t.processTransaction(rawTx,txHash);
 	}
 
-	// rawTx and stack are rlp encoded
-	function verifyTx(bytes rawTx, bytes txIndex, bytes stack, bytes32 blockHash) constant returns (bytes32) {
-		header h = rbchain[blockHash];
-		if(h.transactionsRoot == 0x0) {
-			return 0x0;
-		}
+	// rawTx and parentNodes are rlp encoded
+	function verifyTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes32 blockHash, bytes headerBytes) constant returns (bytes32) {
+		if(rbchain[blockHash] == 0) {return 0x0;}
+		if(sha3(headerBytes) != blockHash) {return 0x0;}
 
-		bytes32 txRoot = h.transactionsRoot;
+		RLP.RLPItem[] memory rlpH = RLP.toList(RLP.toRLPItem(headerBytes));
+		bytes32 txRoot = RLP.toBytes32(rlpH[4]);
 
-		require(verifyMerkleProof(rawTx, txIndex, stack, txRoot));
+		if(verifyMerkleProof(rawTx, txIndex, parentNodes, txRoot)) {return 0x0;}
 
 		/*
 			compute and return txHash
 		*/
 	}
 
-	function verifyMerkleProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) constant returns (bool) {
-		return MerklePatriciaProof.verifyProof(value, encodedPath, rlpStack, root);
+	function verifyMerkleProof(bytes value, bytes encodedPath, bytes parentNodes, bytes32 root) constant returns (bool) {
+		return MerklePatriciaProof.verifyProof(value, encodedPath, parentNodes, root);
 	}
+
+	function memcpy(uint dest, uint src, uint len) private {
+        // Copy word-length chunks while possible
+        for(; len >= 32; len -= 32) {
+            assembly {
+                mstore(dest, mload(src))
+            }
+            dest += 32;
+            src += 32;
+        }
+
+        // Copy remaining bytes
+        uint mask = 256 ** (32 - len) - 1;
+        assembly {
+            let srcpart := and(mload(src), not(mask))
+            let destpart := and(mload(dest), mask)
+            mstore(dest, or(destpart, srcpart))
+        }
+    }
 }
