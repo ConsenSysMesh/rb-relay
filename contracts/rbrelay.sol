@@ -63,19 +63,11 @@ contract rbrelay {
             if(i == 12) {
                 bytes memory signedExtraData = RLP.toData(rlpH[i]);
                 uint initLen = signedExtraData.length - 65;
+
                 bytes memory unsignedExtraData = new bytes(initLen);
                 for(uint j = 0; j<initLen; j++) {
                     unsignedExtraData[j] = signedExtraData[j];
                 }
-
-                // the following saves 8780 gas:
-                // uint uPtr;
-                // uint sPtr;
-                // assembly {
-                // 	uPtr := add(unsignedExtraData,0x20)
-                // 	sPtr := add(signedExtraData,0x20)
-                // }
-                // memcpy(uPtr, sPtr, initLen);
 
                 headerItem = rlpEncode.encodeBytes(unsignedExtraData);
             } else {
@@ -101,7 +93,7 @@ contract rbrelay {
 		v = uint8(vWord)+27;
 	}
 
-	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v)  returns (bool) {
+	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) internal constant returns (bool) {
 	    if(rbchain[parentHash] == 0) {return false;}
 	    if(rbchain[blockHash] != 0) {return false;}
 
@@ -114,8 +106,8 @@ contract rbrelay {
 	}
 
 	// rawTx and parentNodes are rlp encoded
-	function relayTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes32 blockHash, bytes headerBytes, address targetAddr) {
-		bytes32 txHash = verifyTx(rawTx, txIndex, parentNodes, blockHash, headerBytes);
+	function relayTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes headerBytes, address targetAddr) {
+		bytes32 txHash = verifyTx(rawTx, txIndex, parentNodes, headerBytes);
 		require(txHash != 0x0);
 
 		Target t = Target(targetAddr);
@@ -123,15 +115,18 @@ contract rbrelay {
 	}
 
 	// rawTx and parentNodes are rlp encoded
-	function verifyTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes32 blockHash, bytes headerBytes) constant returns (bytes32) {
-		if(rbchain[blockHash] == 0) {return 0x0;}
+	function verifyTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes headerBytes) constant returns (bytes32) {
+		bytes32 blockHash = sha3(headerBytes);
+
 		if(sha3(headerBytes) != blockHash) {return 0x0;}
+		if(rbchain[blockHash] == 0) {return 0x0;}
 
 		RLP.RLPItem[] memory rlpH = RLP.toList(RLP.toRLPItem(headerBytes));
 		bytes32 txRoot = RLP.toBytes32(rlpH[4]);
 
-		if(verifyMerkleProof(rawTx, txIndex, parentNodes, txRoot)) {return 0x0;}
+		if(!verifyMerkleProof(rawTx, txIndex, parentNodes, txRoot)) {return 0x0;}
 
+		return 0x1;
 		/*
 			compute and return txHash
 		*/
