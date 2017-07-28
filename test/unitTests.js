@@ -1,9 +1,9 @@
 const rlp = require('rlp')
-const proof = require('merkle-patricia-proof')
+const EthProof = require('eth-proof')
 var h = require('./helpers');
 var Web3 = require('web3')
 var web3 = new Web3(new Web3.providers.HttpProvider("https://mainnet.infura.io"))
-var ep = new proof.EP(new Web3.providers.HttpProvider("https://mainnet.infura.io"))
+var ep = new EthProof(new Web3.providers.HttpProvider("https://mainnet.infura.io"))
 
 var rbrelay = artifacts.require("./rbrelay.sol");
 
