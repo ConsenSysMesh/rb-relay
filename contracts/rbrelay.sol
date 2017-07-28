@@ -11,6 +11,7 @@ contract Target {
 contract rbrelay {
 	mapping(bytes32=>uint) public rbchain;
 
+	bytes32 public startHash;
 	bytes32 public head;
 	mapping(address=>bool) isSigner;
 
@@ -18,12 +19,21 @@ contract rbrelay {
 		return rbchain[blockHash];
 	}
     
-	function rbrelay() {
+	function rbrelay(bytes32 _startHash, uint startNum) {
 	    rbchain[0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177] = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 	    
-	    // head == second block hash
-	    head = 0xa7684ac44d48494670b2e0d9085b7750e7341620f0a271db146ed5e70c1db854;
-	    rbchain[head] = 1;
+	    if(_startHash==0) {
+		    // head == second block hash
+		    head = 0xa7684ac44d48494670b2e0d9085b7750e7341620f0a271db146ed5e70c1db854;
+		    rbchain[head] = 1;
+
+		    startHash = head;
+		} else {
+			head = _startHash;
+			rbchain[head] = startNum;
+
+			startHash = _startHash;
+		}
 
 		isSigner[0x42EB768f2244C8811C63729A21A3569731535f06] = true;
 		isSigner[0x7ffC57839B00206D1ad20c69A1981b489f772031] = true;
