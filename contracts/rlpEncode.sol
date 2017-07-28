@@ -34,7 +34,11 @@ library rlpEncode {
     }
 
     function encode(bytes memory self, uint8 prefix1, uint8 prefix2) private constant returns (bytes) {
-    	bytes memory encoded;
+    	uint selfPtr;
+        assembly { selfPtr := add(self, 0x20) }
+
+        bytes memory encoded;
+        uint encodedPtr;
 
     	uint len = self.length;
         uint lenLen;
@@ -46,20 +50,37 @@ library rlpEncode {
 
         if(len <= 55) {
 		    encoded = new bytes(len+1);
+
+            // length encoding byte
 		    encoded[0] = byte(prefix1+len);
-		    for(i=1; i<encoded.length; i++) {
-		        encoded[i] = self[i-1];
-		    }
+
+            // string/list contents
+            assembly { encodedPtr := add(encoded, 0x21) }
+            memcpy(encodedPtr, selfPtr, len);
         } else {
         	// 1 is the length of the length of the length
 		    encoded = new bytes(1+lenLen+len);
+
+            // length of the length encoding byte
 		    encoded[0] = byte(prefix2+lenLen);
+
+            // length bytes
+            bytes memory lenBytes = new bytes(lenLen);
+            // uint lenPtr;
+            assembly {
+                encodedPtr := add(encoded, 0x21)
+                // lenPtr := add(lenBytes, 0x20)
+
+                // mstore(lenPtr, len)
+            }
+            // memcpy(encodedPtr, lenPtr, lenLen);
 		    for(i=1; i<=lenLen; i++) {
 		        encoded[i] = byte((len/(0x100**(lenLen-i)))%0x100);
 		    }
-		    for(i=lenLen+1; i<encoded.length; i++) {
-		        encoded[i] = self[i-lenLen-1];
-		    }
+
+            // string/list contents
+            assembly { encodedPtr := add(encodedPtr, lenLen) }
+            memcpy(encodedPtr, selfPtr, len);
         }
         return encoded;
     }
@@ -74,17 +95,18 @@ library rlpEncode {
     		len += self[i].length;
         }
 
-        slice[] memory slices = new slice[](self.length);
-        for(i=0; i<self.length; i++) {
-            slices[i] = toSlice(self[i]);
-        }
-
         bytes memory flattened = new bytes(len);
         uint flattenedPtr;
         assembly { flattenedPtr := add(flattened, 0x20) }
+
         for(i=0; i<self.length; i++) {
-            memcpy(flattenedPtr, slices[i]._ptr, slices[i]._len);
-            flattenedPtr += slices[i]._len;
+            bytes memory item = self[i];
+            
+            uint selfPtr;
+            assembly { selfPtr := add(item, 0x20)}
+
+            memcpy(flattenedPtr, selfPtr, item.length);
+            flattenedPtr += self[i].length;
         }
 
         return flattened;
@@ -94,11 +116,6 @@ library rlpEncode {
      * String & slice utility library for Solidity contracts.
      * @author Nick Johnson <arachnid@notdot.net>
      */
-
-    struct slice {
-        uint _len;
-        uint _ptr;
-    }
 
     function memcpy(uint dest, uint src, uint len) private {
         // Copy word-length chunks while possible
@@ -117,18 +134,5 @@ library rlpEncode {
             let destpart := and(mload(dest), mask)
             mstore(dest, or(destpart, srcpart))
         }
-    }
-
-    /*
-     * @dev Returns a slice containing the entire string.
-     * @param self The string to make a slice from.
-     * @return A newly allocated slice containing the entire string.
-     */
-    function toSlice(bytes self) private returns (slice) {
-        uint ptr;
-        assembly {
-            ptr := add(self, 0x20)
-        }
-        return slice(self.length, ptr);
     }
 }

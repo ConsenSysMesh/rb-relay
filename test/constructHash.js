@@ -10,9 +10,9 @@ stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input)
 byteable = (input)=>{ return input.length % 2 == 0 ? input : '0' + input }
 
 contract('rbrelay', function(accounts) {
-	it("should construct the unsigned hash", () => {
+	it("should construct the unsigned hash", function(done) {
 		var rb;
-		var block = rinkebyWeb3.eth.getBlock(1,true);
+		var block = rinkebyWeb3.eth.getBlock(2,true);
 
 		if(block != null) {
 			var hash = block["hash"];
@@ -69,11 +69,14 @@ contract('rbrelay', function(accounts) {
 		var gas1, gas2, gas3
 		rbrelay.deployed().then(function(instance) {
 			rb = instance;
-			return rb.contructUnsignedHash(signedBytes)
+			return rb.constructUnsignedHash(signedBytes)
 		}).then(function(result) {
 			//gas1 = result.receipt.cumulativeGasUsed
 			//console.log(gas1)
-			assert.equal(JSON.stringify(result), unsignedHash, "something went wrong");
+			console.log("hello:::: "+result);
+			assert.equal(result, unsignedHash, "something went wrong");
+		}).then(function() {
+			done();
 		})
 	})
 })
