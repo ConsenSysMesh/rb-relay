@@ -7,6 +7,10 @@ const ep = new EthProof(new Web3.providers.HttpProvider("https://mainnet.infura.
 
 const rbrelay = artifacts.require("./rbrelay.sol");
 
+numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
+stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input), 'hex') }
+byteable = (input)=>{ return input.length % 2 == 0 ? input : '0' + input }
+
 contract('rbrelay', function(accounts) {
   it("should verify tx 0x7c9cf78f89befd42332bf13d5afb5f27f14912739c3cca9a430c11c45837ce28", function(done) {
     var value, path, parentNodes, txRoot
@@ -18,7 +22,7 @@ contract('rbrelay', function(accounts) {
       // console.log("parentNodes: " + proof.parentNodes)
       // console.log("txRoot: " + proof.txRoot)
       //console.log("\nremix input: [" + hexToBytes(value)+"],["+hexToBytes(path)+"],["+hexToBytes(parentNodes)+"],\""+txRoot+"\"")
-      console.log(proof)
+      //console.log(proof)
       var rb
       return rbrelay.deployed().then(function(instance) {
         rb = instance;
