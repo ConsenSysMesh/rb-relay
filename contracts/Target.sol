@@ -1,9 +1,17 @@
 pragma solidity ^0.4.11;
 
 contract Target {
-	bool public done;
-	
-	function processTransaction(bytes rawTx, bytes32 txHash) {
-		done = true;
+	bool public txDone;
+	bool public receiptDone;
+	bool public accountDone;
+
+	function processTransaction(bytes rawTx) {
+		txDone = true;
+	}
+	function processReceipt(bytes receipt) {
+		receiptDone = true;
+	}
+	function processAccount(bytes account) {
+		accountDone = true;
 	}
 }

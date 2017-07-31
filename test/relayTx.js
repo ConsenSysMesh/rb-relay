@@ -66,7 +66,7 @@ contract('rbrelay', function(accounts) {
       return target.deployed();
     }).then(function(instance) {
       t = instance;
-      return t.done.call();
+      return t.txDone.call();
     }).then(function(result) {
       console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isFalse(result, "done is not false");
@@ -91,7 +91,7 @@ contract('rbrelay', function(accounts) {
     rb.relayTx(proof.value, proof.path, proof.parentNodes, encoded, t.address).then(function(result) {
       console.log("\nrelayTx:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
-      return t.done.call();
+      return t.txDone.call();
     }).then(function(result) {
       console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isTrue(result, "done is not true");

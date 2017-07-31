@@ -1,35 +1,33 @@
-/*
- * @title RLPEncoder
- * @author Sam Mayo (sammayo888@gmail.com)
- *
- * @dev Library for rlp encoding arbitrary bytes or lists.
- */
+/// @title RLPEncoder
+/// @author Sam Mayo (sammayo888@gmail.com)
+/// @dev Library for rlp encoding arbitrary bytes or lists.
 
 library rlpEncode {
-    /*
-     * @dev Rlp encodes a string.
-     * @param self The bytes to be encoded.
-     * @return The encoded bytes.
-     */
+    uint8 constant STRING_SHORT_PREFIX = 0x80;
+    uint8 constant STRING_LONG_PREFIX = 0xb7;
+    uint8 constant LIST_SHORT_PREFIX = 0xc0;
+    uint8 constant LIST_LONG_PREFIX = 0xf7;
+
+    /// @dev Rlp encodes a bytes
+    /// @param self The bytes to be encoded
+    /// @return The rlp encoded bytes
 	function encodeBytes(bytes memory self) internal constant returns (bytes) {
         bytes memory encoded;
         if(self.length == 1 && uint(self[0]) < 0x80) {
             encoded = new bytes(1);
             encoded = self;
         } else {
-        	encoded = encode(self, 0x80, 0xb7);
+        	encoded = encode(self, STRING_SHORT_PREFIX, STRING_LONG_PREFIX);
 		}
         return encoded;
     }
     
-    /*
-     * @dev Rlp encodes a bytes[]. Note that the items in the list will not automatically be rlp encoded.
-     * @param self The bytes[] to be encoded.
-     * @return The encoded bytes[].
-     */
+    /// @dev Rlp encodes a bytes[]. Note that the items in the bytes[] will not automatically be rlp encoded.
+    /// @param self The bytes[] to be encoded
+    /// @return The rlp encoded bytes[]
     function encodeList(bytes[] memory self) internal constant returns (bytes) {
     	bytes memory list = flatten(self);
-	    bytes memory encoded = encode(list, 0xc0, 0xf7);
+	    bytes memory encoded = encode(list, LIST_SHORT_PREFIX, LIST_LONG_PREFIX);
         return encoded;
     }
 
