@@ -12,13 +12,13 @@ library MerklePatriciaProof {
      * @dev Verifies a merkle patricia proof.
      * @param value The terminating value in the trie.
      * @param encodedPath The path in the trie leading to value.
-     * @param rlpStack The rlp encoded stack of nodes.
+     * @param rlpParentNodes The rlp encoded stack of nodes.
      * @param root The root hash of the trie.
      * @return The boolean validity of the proof.
      */
-	function verifyProof(bytes value, bytes encodedPath, bytes rlpStack, bytes32 root) internal constant returns (bool) {
-		RLP.RLPItem memory item = RLP.toRLPItem(rlpStack);
-        RLP.RLPItem[] memory stack = RLP.toList(item);
+	function verifyProof(bytes value, bytes encodedPath, bytes rlpParentNodes, bytes32 root) internal constant returns (bool) {
+		RLP.RLPItem memory item = RLP.toRLPItem(rlpParentNodes);
+        RLP.RLPItem[] memory parentNodes = RLP.toList(item);
 
 		bytes memory currentNode;
 		RLP.RLPItem[] memory currentNodeList;
@@ -29,12 +29,12 @@ library MerklePatriciaProof {
 	    bytes memory path = getNibbleArray(encodedPath);
 	    if(path.length == 0) {return false;}
 	    
-	    for (uint i=0; i<stack.length; i++) {
+	    for (uint i=0; i<parentNodes.length; i++) {
 	    	if(pathPtr > path.length) {return false;}
 
-	    	currentNode = RLP.toBytes(stack[i]);
+	    	currentNode = RLP.toBytes(parentNodes[i]);
 	    	if(nodeKey != sha3(currentNode)) {return false;}
-			currentNodeList = RLP.toList(stack[i]);
+			currentNodeList = RLP.toList(parentNodes[i]);
 
 	      	if(currentNodeList.length == 17) {
 	          	if(pathPtr == path.length) {

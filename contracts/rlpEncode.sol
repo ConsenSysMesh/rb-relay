@@ -7,7 +7,7 @@
 
 library rlpEncode {
     /*
-     * @dev Returns an rlp encoded string.
+     * @dev Rlp encodes a string.
      * @param self The bytes to be encoded.
      * @return The encoded bytes.
      */
@@ -23,7 +23,7 @@ library rlpEncode {
     }
     
     /*
-     * @dev Returns an rlp encoded bytes[].
+     * @dev Rlp encodes a bytes[]. Note that the items in the list will not automatically be rlp encoded.
      * @param self The bytes[] to be encoded.
      * @return The encoded bytes[].
      */
@@ -65,21 +65,12 @@ library rlpEncode {
 		    encoded[0] = byte(prefix2+lenLen);
 
             // length bytes
-            bytes memory lenBytes = new bytes(lenLen);
-            // uint lenPtr;
-            assembly {
-                encodedPtr := add(encoded, 0x21)
-                // lenPtr := add(lenBytes, 0x20)
-
-                // mstore(lenPtr, len)
-            }
-            // memcpy(encodedPtr, lenPtr, lenLen);
 		    for(i=1; i<=lenLen; i++) {
 		        encoded[i] = byte((len/(0x100**(lenLen-i)))%0x100);
 		    }
 
             // string/list contents
-            assembly { encodedPtr := add(encodedPtr, lenLen) }
+            assembly { encodedPtr := add(add(encoded, 0x21), lenLen) }
             memcpy(encodedPtr, selfPtr, len);
         }
         return encoded;
@@ -111,11 +102,6 @@ library rlpEncode {
 
         return flattened;
     }
-
-    /*
-     * String & slice utility library for Solidity contracts.
-     * @author Nick Johnson <arachnid@notdot.net>
-     */
 
     function memcpy(uint dest, uint src, uint len) private {
         // Copy word-length chunks while possible

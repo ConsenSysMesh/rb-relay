@@ -1,8 +1,0 @@
-{
-  "contract_name": "rlpEncode",
-  "abi": [],
-  "unlinked_binary": "0x60606040523415600b57fe5b5b60338060196000396000f30060606040525bfe00a165627a7a7230582041197b64d6e150410c65ad9e12978c3f4cc2a0674a04ec600a746ac94defc7130029",
-  "networks": {},
-  "schema_version": "0.0.5",
-  "updated_at": 1500655005020
-}

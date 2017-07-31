@@ -3,10 +3,7 @@ pragma solidity ^0.4.11;
 import "./RLP.sol";
 import "./rlpEncode.sol";
 import "./MerklePatriciaProof.sol";
-
-contract Target {
-	function processTransaction(bytes rawTx, bytes32 txHash) {}
-}
+import "./Target.sol";
 
 contract rbrelay {
 	mapping(bytes32=>uint) public rbchain;
@@ -14,26 +11,16 @@ contract rbrelay {
 	bytes32 public startHash;
 	bytes32 public head;
 	mapping(address=>bool) isSigner;
-
-	function getBlockNumber(bytes32 blockHash) returns (uint) {
-		return rbchain[blockHash];
-	}
     
 	function rbrelay(bytes32 _startHash, uint startNum) {
-	    rbchain[0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177] = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-	    
 	    if(_startHash==0) {
-		    // head == second block hash
-		    head = 0xa7684ac44d48494670b2e0d9085b7750e7341620f0a271db146ed5e70c1db854;
-		    rbchain[head] = 1;
-
-		    startHash = head;
+		    startHash = 0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177;
+		    rbchain[startHash] = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 		} else {
-			head = _startHash;
-			rbchain[head] = startNum;
-
 			startHash = _startHash;
+			rbchain[startHash] = startNum;
 		}
+		head = startHash;
 
 		isSigner[0x42EB768f2244C8811C63729A21A3569731535f06] = true;
 		isSigner[0x7ffC57839B00206D1ad20c69A1981b489f772031] = true;
@@ -52,7 +39,7 @@ contract rbrelay {
 		}
 	}
 
-	function parseBlockHeader(bytes headerBytes) constant returns (bytes32 parentHash, uint blockNumber, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) {
+	function parseBlockHeader(bytes headerBytes) private constant returns (bytes32 parentHash, uint blockNumber, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) {
         RLP.RLPItem[] memory rlpH = RLP.toList(RLP.toRLPItem(headerBytes));
 
         parentHash = RLP.toBytes32(rlpH[0]);
@@ -63,7 +50,7 @@ contract rbrelay {
 		(r, s, v) = getSignature(extraData);
 	}
 
-	function constructUnsignedHash(bytes memory headerBytes) constant returns (bytes32) {
+	function constructUnsignedHash(bytes memory headerBytes) private constant returns (bytes32) {
         RLP.RLPItem memory item = RLP.toRLPItem(headerBytes);
         RLP.RLPItem[] memory rlpH = RLP.toList(item);
         bytes[] memory unsignedHeader = new bytes[](15);
@@ -90,7 +77,7 @@ contract rbrelay {
         return unsignedHash;
     }
     
-    function getSignature(bytes memory signedExtraData) internal constant returns (bytes32 r, bytes32 s, uint8 v) {
+    function getSignature(bytes memory signedExtraData) private constant returns (bytes32 r, bytes32 s, uint8 v) {
 		uint vWord;
 		uint OFFSET = 0x20 + signedExtraData.length - 65;
 		assembly {
@@ -103,7 +90,7 @@ contract rbrelay {
 		v = uint8(vWord)+27;
 	}
 
-	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) internal constant returns (bool) {
+	function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) private constant returns (bool) {
 	    if(rbchain[parentHash] == 0) {return false;}
 	    if(rbchain[blockHash] != 0) {return false;}
 
@@ -125,7 +112,7 @@ contract rbrelay {
 	}
 
 	// rawTx and parentNodes are rlp encoded
-	function verifyTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes headerBytes) constant returns (bytes32) {
+	function verifyTx(bytes rawTx, bytes txIndex, bytes parentNodes, bytes headerBytes) private constant returns (bytes32) {
 		bytes32 blockHash = sha3(headerBytes);
 
 		if(sha3(headerBytes) != blockHash) {return 0x0;}
@@ -145,23 +132,4 @@ contract rbrelay {
 	function verifyMerkleProof(bytes value, bytes encodedPath, bytes parentNodes, bytes32 root) constant returns (bool) {
 		return MerklePatriciaProof.verifyProof(value, encodedPath, parentNodes, root);
 	}
-
-	function memcpy(uint dest, uint src, uint len) private {
-        // Copy word-length chunks while possible
-        for(; len >= 32; len -= 32) {
-            assembly {
-                mstore(dest, mload(src))
-            }
-            dest += 32;
-            src += 32;
-        }
-
-        // Copy remaining bytes
-        uint mask = 256 ** (32 - len) - 1;
-        assembly {
-            let srcpart := and(mload(src), not(mask))
-            let destpart := and(mload(dest), mask)
-            mstore(dest, or(destpart, srcpart))
-        }
-    }
 }
