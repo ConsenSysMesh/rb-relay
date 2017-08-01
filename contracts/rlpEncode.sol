@@ -1,8 +1,8 @@
-/// @title RLPEncoder
+/// @title RLP Encoding Library for Solidity
 /// @author Sam Mayo (sammayo888@gmail.com)
 /// @dev Library for rlp encoding arbitrary bytes or lists.
 
-library rlpEncode {
+library RLPEncode {
     uint8 constant STRING_SHORT_PREFIX = 0x80;
     uint8 constant STRING_LONG_PREFIX = 0xb7;
     uint8 constant LIST_SHORT_PREFIX = 0xc0;
@@ -11,14 +11,14 @@ library rlpEncode {
     /// @dev Rlp encodes a bytes
     /// @param self The bytes to be encoded
     /// @return The rlp encoded bytes
-	function encodeBytes(bytes memory self) internal constant returns (bytes) {
+    function encodeBytes(bytes memory self) internal constant returns (bytes) {
         bytes memory encoded;
         if(self.length == 1 && uint(self[0]) < 0x80) {
             encoded = new bytes(1);
             encoded = self;
         } else {
-        	encoded = encode(self, STRING_SHORT_PREFIX, STRING_LONG_PREFIX);
-		}
+            encoded = encode(self, STRING_SHORT_PREFIX, STRING_LONG_PREFIX);
+        }
         return encoded;
     }
     
@@ -26,46 +26,46 @@ library rlpEncode {
     /// @param self The bytes[] to be encoded
     /// @return The rlp encoded bytes[]
     function encodeList(bytes[] memory self) internal constant returns (bytes) {
-    	bytes memory list = flatten(self);
-	    bytes memory encoded = encode(list, LIST_SHORT_PREFIX, LIST_LONG_PREFIX);
+        bytes memory list = flatten(self);
+        bytes memory encoded = encode(list, LIST_SHORT_PREFIX, LIST_LONG_PREFIX);
         return encoded;
     }
 
     function encode(bytes memory self, uint8 prefix1, uint8 prefix2) private constant returns (bytes) {
-    	uint selfPtr;
+        uint selfPtr;
         assembly { selfPtr := add(self, 0x20) }
 
         bytes memory encoded;
         uint encodedPtr;
 
-    	uint len = self.length;
+        uint len = self.length;
         uint lenLen;
         uint i = 0x1;
-	    while(len/i != 0) {
-	        lenLen++;
-	        i *= 0x100;
-	    }
+        while(len/i != 0) {
+            lenLen++;
+            i *= 0x100;
+        }
 
         if(len <= 55) {
-		    encoded = new bytes(len+1);
+            encoded = new bytes(len+1);
 
             // length encoding byte
-		    encoded[0] = byte(prefix1+len);
+            encoded[0] = byte(prefix1+len);
 
             // string/list contents
             assembly { encodedPtr := add(encoded, 0x21) }
             memcpy(encodedPtr, selfPtr, len);
         } else {
-        	// 1 is the length of the length of the length
-		    encoded = new bytes(1+lenLen+len);
+            // 1 is the length of the length of the length
+            encoded = new bytes(1+lenLen+len);
 
             // length of the length encoding byte
-		    encoded[0] = byte(prefix2+lenLen);
+            encoded[0] = byte(prefix2+lenLen);
 
             // length bytes
-		    for(i=1; i<=lenLen; i++) {
-		        encoded[i] = byte((len/(0x100**(lenLen-i)))%0x100);
-		    }
+            for(i=1; i<=lenLen; i++) {
+                encoded[i] = byte((len/(0x100**(lenLen-i)))%0x100);
+            }
 
             // string/list contents
             assembly { encodedPtr := add(add(encoded, 0x21), lenLen) }
@@ -80,8 +80,8 @@ library rlpEncode {
         }
 
         uint len;
-    	for(uint i=0; i<self.length; i++) {
-    		len += self[i].length;
+        for(uint i=0; i<self.length; i++) {
+            len += self[i].length;
         }
 
         bytes memory flattened = new bytes(len);
@@ -101,6 +101,7 @@ library rlpEncode {
         return flattened;
     }
 
+    /// This function is from Nick Johnson's string utils library
     function memcpy(uint dest, uint src, uint len) private {
         // Copy word-length chunks while possible
         for(; len >= 32; len -= 32) {
