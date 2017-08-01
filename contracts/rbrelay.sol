@@ -1,7 +1,7 @@
 pragma solidity ^0.4.11;
 
 import "./RLP.sol";
-import "./rlpEncode.sol";
+import "./RLPEncode.sol";
 import "./MerklePatriciaProof.sol";
 import "./Target.sol";
 
@@ -66,13 +66,13 @@ contract rbrelay {
                     unsignedExtraData[j] = signedExtraData[j];
                 }
 
-                headerItem = rlpEncode.encodeBytes(unsignedExtraData);
+                headerItem = RLPEncode.encodeBytes(unsignedExtraData);
             } else {
                 headerItem = RLP.toBytes(rlpH[i]);
             }
             unsignedHeader[i] = headerItem;
         }
-        bytes memory rlpUnsignedHeader = rlpEncode.encodeList(unsignedHeader);
+        bytes memory rlpUnsignedHeader = RLPEncode.encodeList(unsignedHeader);
         bytes32 unsignedHash = sha3(rlpUnsignedHeader);
         return unsignedHash;
     }
