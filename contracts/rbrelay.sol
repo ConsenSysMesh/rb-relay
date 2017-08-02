@@ -92,7 +92,6 @@ contract rbrelay {
 
     function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) private constant returns (bool) {
         if(rbchain[parentHash] == 0) {return false;}
-        if(rbchain[blockHash] != 0) {return false;}
 
         address miner = ecrecover(unsignedHash,v,r,s);
         if(!isSigner[miner]) {
