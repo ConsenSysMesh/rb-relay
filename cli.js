@@ -3,29 +3,50 @@
 const pkg = require("./package.json");
 const rlp = require('rlp');
 const Web3 = require('web3')
-const web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io"))
 const EthProof = require('eth-proof');
+const Contract = require('truffle-contract');
+const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io"))
+const ropstenWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io"))
 const ep = new EthProof(new Web3.providers.HttpProvider("https://rinkeby.infura.io"));
+const Rbrelay = require('./build/rbrelay.json');
 
 const args = process.argv.slice(2);
 const command = args[0];
 
-var latestBlock = 0 // inital block
 
-const defaultMsg = "Usage: <command> <options>";
 switch(command) {
-	case "version":
+  case "version":
     console.log(pkg.version);
     break;
   case "start":
-    setInterval(readRbBlockNum, 2500);
+    relay()
   default:
-    console.log(defaultMsg);
+    console.log("Usage: <command> <options>");
 }
 
-function readRbBlockNum() {
-  web3.getBlock("latest", (err,result) => {
-    if(result  latestBlock) {
+
+var rinkebyLatestBlockNum = 0
+var relayLatestBlockNum = 0
+
+
+function relay(){
+  Rbrelay = 
+    setInterval(rinkebyGetLatestBlock, 2500);
+  // setInterval(RbGetBlockNum, 2500);
+}
+
+
+function rinkebyGetLatestBlock() {
+  rinkebyWeb3.getBlock("latest", (err,result) => {
+    if(result.toNumber() != rinkebyLatestBlock) {
+      rinkebyLatestBlock = result;
+    }
+  })
+}
+
+function RelayGetLatestBlock() {
+  rinkebyWeb3.getBlock("latest", (err,result) => {
+    if(result != latestBlock) {
       latestBlock = result;
     }
   })

@@ -22,6 +22,14 @@ module.exports = {
     kovan: {
       provider: new HDWalletProvider(mnemonic, "https://kovan.infura.io/"),
       network_id: 42
-    }
+    },
+    ropsten: {
+      provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io/"),
+      network_id: 3
+    },
+    rinkeby: {
+      provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io/"),
+      network_id: 3
+    },
   }
 };
