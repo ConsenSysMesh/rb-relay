@@ -1,0 +1,87 @@
+{
+  "contract_name": "Target",
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "account",
+          "type": "bytes"
+        }
+      ],
+      "name": "processAccount",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "accountDone",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "rawTx",
+          "type": "bytes"
+        }
+      ],
+      "name": "processTransaction",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "txDone",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "receiptDone",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "receipt",
+          "type": "bytes"
+        }
+      ],
+      "name": "processReceipt",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    }
+  ],
+  "unlinked_binary": "0x6060604052341561000c57fe5b5b61025d8061001c6000396000f3006060604052361561005c5763ffffffff60e060020a600035041663127f290c811461005e5780632d7f03e8146100b657806346e2cc09146100da578063738af39514610132578063a637b17814610156578063e112be801461017a575bfe5b341561006657fe5b6100b4600480803590602001908201803590602001908080601f016020809104026020016040519081016040528093929190818152602001838380828437509496506101d295505050505050565b005b34156100be57fe5b6100c66101e7565b604080519115158252519081900360200190f35b34156100e257fe5b6100b4600480803590602001908201803590602001908080601f016020809104026020016040519081016040528093929190818152602001838380828437509496506101f695505050505050565b005b341561013a57fe5b6100c6610207565b604080519115158252519081900360200190f35b341561015e57fe5b6100c6610210565b604080519115158252519081900360200190f35b341561018257fe5b6100b4600480803590602001908201803590602001908080601f0160208091040260200160405190810160405280939291908181526020018383808284375094965061021e95505050505050565b005b6000805462ff00001916620100001790555b50565b60005462010000900460ff1681565b6000805460ff191660011790555b50565b60005460ff1681565b600054610100900460ff1681565b6000805461ff0019166101001790555b505600a165627a7a7230582040279d29474b6333d011c3ad960e9a676b8441fca9c9c7c9b0142cbe0a635bd80029",
+  "networks": {},
+  "schema_version": "0.0.5",
+  "updated_at": 1501710371349
+}
