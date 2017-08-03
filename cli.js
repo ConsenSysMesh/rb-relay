@@ -13,6 +13,10 @@ const option1 = args[1];
 const option2 = args[2];
 const hex = /0x[a-f0-9]{64}/i;
 
+const numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
+const stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input), 'hex') }
+const byteable = (input)=>{ return input.length % 2 == 0 ? input : '0' + input }
+
 const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
 const ropstenWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
 
@@ -71,9 +75,26 @@ function checkOptions(option1, option2, id) {
   return true;
 }
 
-
+var nonce = 0;
+var relayNextNum;
+var txSent = {}
+var intervalID = 0
 function relay() {
-  setInterval(storeLatestBlock, 2500);
+  ropstenWeb3.eth.getTransactionCount(provider.getAddress(), function(e,_nonce){
+    nonce = _nonce - 1;
+    txSent = {};
+    var rb;
+    Rbrelay.deployed().then(function(instance) {
+      rb = instance;
+      return rb.head.call();
+    }).then(function(result) {
+      return rb.rbchain.call(result);
+    }).then(function(result) {
+      relayNextNum = parseInt(result) + 1;
+      clearInterval(intervalID);
+      intervalID = setInterval(storeLatestBlock, 2500);
+    });
+  })
   // setInterval(RbGetBlockNum, 2500);
 }
 
@@ -103,37 +124,42 @@ function relay() {
 //     });
 //   });
 // }
-
 function storeLatestBlock() {
-    rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-      var rblatest = result;
-      var rb;
-      rbrelay.deployed().then(function(instance) {
-        rb = instance;
-        return rb.head.call();
-      }).then(function(result) {
-        return rb.rbchain.call(result);
-      }).then(function(result) {
-        relayLatest = parseInt(result);
-        if(relayLatest < rblatest) {
-          constructHeader(relayLatest+1).then((header)=>{
-            return rb.storeBlockHeader(header);
+  rinkebyWeb3.eth.getBlock("latest", (err,result) => {
+    var rblatest = parseInt(result.number);
+    var rb;
+    Rbrelay.deployed().then(function(instance) {
+      rb = instance;
+
+      if(relayNextNum <= rblatest && !txSent[relayNextNum]) {
+          constructHeader(relayNextNum).then(function(header){
+            nonce++;
+            txSent[relayNextNum] = true;
+            console.log("about to store block: relayNext, rblatest", relayNextNum, rblatest)
+            relayNextNum++;
+            return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, from: provider.getAddress()});
           }).then(function(tx) {
-            console.log(tx)
+            return rb.head.call();
+          }).then((hash)=>{
+            return rb.rbchain.call(hash);
+          }).then(function(number) {
+            console.log("block number " + number + " stored")
+          }).catch((error)=>{
+            relay()
           })
-        } else {
-          console.log("no block to store", relayLatest, rblatest)
-        }
-      })
-    });
+      } else {
+        console.log("didn't store block: relayNext, rblatest", relayNextNum, rblatest)
+      }
+    })
+  });
 }
 
 
 function constructHeader(blockNum) {
   return new Promise((resolve, reject) => {
     var encoded;
-
-    var block = rinkebyWeb3.eth.getBlock(blockNum, true, (err, result) => {
+    rinkebyWeb3.eth.getBlock(blockNum, true, (err, result) => {
+      var block = result;
       if(block != null) {
         var hash = block["hash"];
 
@@ -162,7 +188,6 @@ function constructHeader(blockNum) {
         }
         encoded = '0x'+rlp.encode(blockBytes).toString('hex')
       }
-
       resolve(encoded);
     });
   });
