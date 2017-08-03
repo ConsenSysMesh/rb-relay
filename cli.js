@@ -79,11 +79,14 @@ var nonce = 0;
 var relayNextNum;
 var txSent = {}
 var intervalID = 0
+var rb;
+var gasPrice = 25000000000;
+
 function relay() {
+  gasPrice++;
   ropstenWeb3.eth.getTransactionCount(provider.getAddress(), function(e,_nonce){
     nonce = _nonce - 1;
     txSent = {};
-    var rb;
     Rbrelay.deployed().then(function(instance) {
       rb = instance;
       return rb.head.call();
@@ -125,33 +128,37 @@ function relay() {
 //   });
 // }
 function storeLatestBlock() {
-  rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-    var rblatest = parseInt(result.number);
-    var rb;
-    Rbrelay.deployed().then(function(instance) {
-      rb = instance;
-
-      if(relayNextNum <= rblatest && !txSent[relayNextNum]) {
-          constructHeader(relayNextNum).then(function(header){
-            nonce++;
-            txSent[relayNextNum] = true;
-            console.log("about to store block: relayNext, rblatest", relayNextNum, rblatest)
-            relayNextNum++;
-            return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, from: provider.getAddress()});
-          }).then(function(tx) {
-            return rb.head.call();
-          }).then((hash)=>{
-            return rb.rbchain.call(hash);
-          }).then(function(number) {
-            console.log("block number " + number + " stored")
-          }).catch((error)=>{
-            relay()
-          })
-      } else {
-        console.log("didn't store block: relayNext, rblatest", relayNextNum, rblatest)
+  try{
+    rb.head.call().then(function(_head) {
+        return rb.rbchain.call(_head);
+    }).then(function(_headNum) {
+      console.log("relayNextNum , _headNum", relayNextNum, parseInt(_headNum))
+      if(relayNextNum > parseInt(_headNum) + 5){
+        relay();
+      }else{
+        rinkebyWeb3.eth.getBlock("latest", (err,result) => {
+          var rblatest = parseInt(result.number);
+          if(relayNextNum <= rblatest && !txSent[relayNextNum]) {
+              constructHeader(relayNextNum).then(function(header){
+                nonce++;
+                txSent[relayNextNum] = true;
+                console.log("about to store block: relayNext, rblatest", relayNextNum, rblatest)
+                relayNextNum++;
+                return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, gasPrice: gasPrice, from: provider.getAddress()});
+              }).then(function(tx) {
+                return rb.head.call();
+              }).then((hash)=>{
+                return rb.rbchain.call(hash);
+              }).then(function(number) {
+                console.log("block number " + number + " stored")
+              }).catch((error)=>{ })
+          } else {
+            console.log("didn't store block: relayNext, rblatest", relayNextNum, rblatest)
+          }
+        })
       }
-    })
-  });
+    });
+  }catch(e){}
 }
 
 
