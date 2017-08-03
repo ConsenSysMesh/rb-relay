@@ -5,11 +5,13 @@
   "dependencies": {
     "ethereumjs-util": "^5.1.2",
     "eth-proof": "*",
-    "node-async-loop": "^1.2.2",
     "rlp": "^2.0.0",
     "truffle-contract": "^2.0.1",
     "truffle-hdwallet-provider": "0.0.3",
     "web3": "^0.19.1"
+  },
+  "devDependencies": {
+    "node-async-loop": "^1.2.2"
   },
   "bin": {
     "rbrelay": "cli.js"
