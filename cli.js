@@ -5,6 +5,8 @@ const rlp = require('rlp');
 const Web3 = require('web3');
 const Contract = require('truffle-contract');
 const EthProof = require('eth-proof');
+const chalk = require('chalk');
+
 const ep = new EthProof(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
 
 const args = process.argv.slice(2);
@@ -45,6 +47,7 @@ switch(command) {
     break;
 
   case "start":
+    console.log("Doing something awesome...")
     relay();
     break;
 
@@ -75,12 +78,16 @@ function checkOptions(option1, option2, id) {
   return true;
 }
 
-var nonce = 0;
+var nonce;
 var relayNextNum;
 var txSent = {}
-var intervalID = 0
+var intervalID;
 var rb;
 var gasPrice = 25000000000;
+var rbLatest;
+var newRbLatest;
+var lastNumConfirmed;
+var newNumConfirmed;
 
 function relay() {
   gasPrice++;
@@ -94,6 +101,7 @@ function relay() {
       return rb.rbchain.call(result);
     }).then(function(result) {
       relayNextNum = parseInt(result) + 1;
+      lastNumConfirmed = relayNextNum
       clearInterval(intervalID);
       intervalID = setInterval(storeLatestBlock, 2500);
     });
@@ -128,37 +136,73 @@ function relay() {
 //   });
 // }
 function storeLatestBlock() {
+  renderAll()
   try{
     rb.head.call().then(function(_head) {
         return rb.rbchain.call(_head);
     }).then(function(_headNum) {
-      console.log("relayNextNum , _headNum", relayNextNum, parseInt(_headNum))
+      // console.log("relayNextNum , _headNum", relayNextNum, parseInt(_headNum))
       if(relayNextNum > parseInt(_headNum) + 5){
         relay();
       }else{
         rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-          var rblatest = parseInt(result.number);
-          if(relayNextNum <= rblatest && !txSent[relayNextNum]) {
+          if (rbLatest != parseInt(result.number)){
+            rbLatest = parseInt(result.number);
+            newRbLatest = true;
+          }
+          if(relayNextNum <= rbLatest && !txSent[relayNextNum]) {
               constructHeader(relayNextNum).then(function(header){
                 nonce++;
                 txSent[relayNextNum] = true;
-                console.log("about to store block: relayNext, rblatest", relayNextNum, rblatest)
+                // renderTxRequest(relayNextNum)
                 relayNextNum++;
                 return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, gasPrice: gasPrice, from: provider.getAddress()});
               }).then(function(tx) {
                 return rb.head.call();
               }).then((hash)=>{
                 return rb.rbchain.call(hash);
-              }).then(function(number) {
-                console.log("block number " + number + " stored")
+              }).then(function(currentNumConfirmed) {
+                lastNumConfirmed = currentNumConfirmed;
+                newNumConfirmed = true;
               }).catch((error)=>{ })
           } else {
-            console.log("didn't store block: relayNext, rblatest", relayNextNum, rblatest)
+            console.log("didn't store block: relayNext, rbLatest", relayNextNum, rbLatest)
           }
         })
       }
     });
   }catch(e){}
+}
+
+function renderAll(){
+  var str = chalk.dim(new Date().toUTCString()) + " \t";
+  str += renderTxRequest() + " \t";
+  str += renderConfirmation() + " \t";
+  str += renderRinkebyBlockMined();
+  console.log(str)
+}
+
+function renderTxRequest(){
+  return chalk.white("Requesting to store BlkNum: ") + chalk.keyword('orange')(relayNextNum);
+}
+function renderConfirmation(){
+  if(newNumConfirmed){
+    newNumConfirmed = false;
+    return  chalk.white("Relay Head: ") + chalk.green.bold(lastNumConfirmed)
+  }else{
+    return  chalk.white("Relay Head: ") + chalk.grey(lastNumConfirmed)
+  }
+  // for (var i = lastNumConfirmed + 1; i <= currentNumConfirmed; i++) {
+  //   p = p + i + ", "
+  // }
+}
+function renderRinkebyBlockMined(){
+  if(newRbLatest){
+    newRbLatest = false
+    return chalk.white("Current Rinkeby Head: ") + chalk.red.bold(rbLatest)
+  }else{
+    return chalk.white("Current Rinkeby Head: ") + chalk.grey(rbLatest)
+  }
 }
 
 
