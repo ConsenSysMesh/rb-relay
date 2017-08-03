@@ -29,7 +29,7 @@ module.exports = {
     },
     rinkeby: {
       provider: new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/"),
-      network_id: "*"
+      network_id: 4
     },
   }
 };

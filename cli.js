@@ -28,10 +28,10 @@ if(fs.existsSync("secrets.json")) {
 }
 
 const HDWalletProvider = require("truffle-hdwallet-provider");
-const Rbrelay = require('./build/contracts/rbrelay.json');
-const rbrelay = Contract(Rbrelay);
+const Rbrelay = Contract(require('./build/contracts/rbrelay.json'))
+// const rbrelay = Contract(Rbrelay);
 const provider = new HDWalletProvider(mnemonic, "https://ropsten.infura.io/");
-rbrelay.setProvider(provider);
+Rbrelay.setProvider(provider);
 
 var rinkebyLatestBlock, relayLatestBlock;
 
@@ -62,25 +62,72 @@ switch(command) {
     console.log("Usage: rbrelay <command> <options>");
 }
 
+function checkOptions(option1, option2, id) {
+  if(!hex.test(option1) || option1.length != 66 ||
+     !hex.test(option2) || option2.length != 42) {
+    console.log("Usage: rbrelay " + id==0?"tx":"receipt" + " [txHash] [targetAddr]");
+    return false;
+  }
+  return true;
+}
+
 
 function relay() {
-  setInterval(storeHeader, 2500);
+  setInterval(storeLatestBlock, 2500);
   // setInterval(RbGetBlockNum, 2500);
 }
 
-function storeHeader() {
-  return new Promise((resolve, reject) => {
-    var rb, header;
-    rbrelay.deployed().then(function(instance) {
-      rb = instance;
-      return rb.head.call();
-    }).then(function(result) {
-      return rb.rbchain.call(result);
-    }).then(function(result) {
-      relayLatestBlock = parseInt(result);
+// function storeHeader() {
+//   // return new Promise((resolve, reject) => {
+//     var rb, header;
+//     Rbrelay.deployed().then(function(instance) {
+//       rb = instance;
+//       return rb.head.call();
+//     }).then(function(result) {
+//       return rb.rbchain.call(result);
+//     }).then(function(result) {
+//       relayLatestBlock = parseInt(result);
+//     });
+//   // });
+// }
+
+
+
+// function rinkebyGetLatestBlock() {
+//   return new Promise((resolve, reject) => {
+//     rinkebyWeb3.eth.getBlock("latest", (err,result) => {
+//       if(result.number != rinkebyLatestBlock) {
+//         rinkebyLatestBlock = result.number;
+//       }
+//       resolve(result.number);
+//     });
+//   });
+// }
+
+function storeLatestBlock() {
+    rinkebyWeb3.eth.getBlock("latest", (err,result) => {
+      var rblatest = result;
+      var rb;
+      rbrelay.deployed().then(function(instance) {
+        rb = instance;
+        return rb.head.call();
+      }).then(function(result) {
+        return rb.rbchain.call(result);
+      }).then(function(result) {
+        relayLatest = parseInt(result);
+        if(relayLatest < rblatest) {
+          constructHeader(relayLatest+1).then((header)=>{
+            return rb.storeBlockHeader(header);
+          }).then(function(tx) {
+            console.log(tx)
+          })
+        } else {
+          console.log("no block to store", relayLatest, rblatest)
+        }
+      })
     });
-  });
 }
+
 
 function constructHeader(blockNum) {
   return new Promise((resolve, reject) => {
@@ -121,35 +168,6 @@ function constructHeader(blockNum) {
   });
 }
 
-function rinkebyGetLatestBlock() {
-  return new Promise((resolve, reject) => {
-    rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-      if(result.number != rinkebyLatestBlock) {
-        rinkebyLatestBlock = result.number;
-      }
-      resolve(result.number);
-    });
-  });
-}
-
-function relayGetLatestBlock(rb) {
-  return new Promise((resolve, reject) => {
-    rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-      var rblatest = result;
-      rb.head.call().then(function(result) {
-        return rb.rbchain.call(result);
-      }).then(function(result) {
-        relayLatest = parseInt(result);
-        if(relayLatest < rblatest) {
-          relayLatestBlock = relayLatest + 1;
-        }
-      })
-
-      resolve(relayLatestBlock);
-    });
-  });
-}
-
 function relayTx(txHash, targetAddr) {
   var proof, rb;
   ep.getTransactionProof(txHash).then(function(result) {
@@ -176,14 +194,7 @@ function relayReceipt(receipt, targetAddr) {
   });
 }
 
-function checkOptions(option1, option2, id) {
-  if(!hex.test(option1) || option1.length != 68 ||
-     !hex.test(option2) || option2.length != 40) {
-    console.log("Usage: rbrelay " + id==0?"tx":"receipt" + " [txHash] [targetAddr]");
-    return false;
-  }
-  return true;
-}
+
 
 function web3ify(input) {
   output = {}

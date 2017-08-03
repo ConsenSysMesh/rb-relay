@@ -21,15 +21,15 @@ contract('rbrelay', function(accounts) {
       rb = instance;
       return rb.startHash.call();
     }).then(function(result) {
-      console.log("\nstart hash: " + result + "\n");
+      // console.log("\nstart hash: " + result + "\n");
       assert.equal(result, "0x9cc20c925e71c1df0d409a6a25d9da2cb82ed3da95b76152a5082e0af35b5d47", "start hash incorrect");
     }).then(function() {
       return target.deployed();
     }).then(function(instance) {
       t = instance;
-      return t.receiptDone.call();
+      return t.receipts.call("0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6" );
     }).then(function(result) {
-      console.log("done:\n" + JSON.stringify(result) + "\n");
+      // console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isFalse(result, "done is not false");
     }).then(function() {
       done();
@@ -38,7 +38,7 @@ contract('rbrelay', function(accounts) {
 
   it("should store block 617591", function(done) {
     rb.storeBlockHeader(proof.header).then(function(result) {
-      console.log("\nstoreBlockHeader:\n" + JSON.stringify(result) + "\n");
+      // console.log("\nstoreBlockHeader:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
       return rb.rbchain.call(proof.blockHash)
     }).then(function(result) {
@@ -50,9 +50,9 @@ contract('rbrelay', function(accounts) {
 
   it("should relay tx 0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6", function(done) {
     rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address).then(function(result) {
-      console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
+      // console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
-      return t.receiptDone.call();
+      return t.receipt.call();
     }).then(function(result) {
       console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isTrue(result, "done is not true");

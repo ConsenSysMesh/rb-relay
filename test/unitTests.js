@@ -14,7 +14,7 @@ contract('rbrelay', function(accounts) {
   before((done) => {
     ep.getTxProof('0x7c9cf78f89befd42332bf13d5afb5f27f14912739c3cca9a430c11c45837ce28').then((response) => {
       txPrf1 = response
-      console.log("startbefore")
+      // console.log("startbefore")
       return  ep.getTxProof('0xefbdc8136a1390d3b0fcd661cac873a3f8257cc8cff12b559f89cf26d8d0a49e')
     }).then((response) => {
       txPrf2 = response
@@ -27,7 +27,7 @@ contract('rbrelay', function(accounts) {
       return rbrelay.deployed()
     }).then((_rb) => {
         rb = _rb;
-      console.log("finishbefore")
+      // console.log("finishbefore")
       done()
     })
   })
