@@ -80,14 +80,16 @@ function checkOptions(option1, option2, id) {
 
 var nonce;
 var relayNextNum;
-var txSent = {}
+var txInGroup = {};
+var newRelayGroup = true;
+var txSent = {};
 var intervalID;
 var rb;
 var gasPrice = 25000000000;
 var rbLatest;
-var newRbLatest;
+var newRbLatest = false;
 var lastNumConfirmed;
-var newNumConfirmed;
+var newNumConfirmed = true;
 
 function relay() {
   gasPrice++;
@@ -100,49 +102,23 @@ function relay() {
     }).then(function(result) {
       return rb.rbchain.call(result);
     }).then(function(result) {
-      relayNextNum = parseInt(result) + 1;
-      lastNumConfirmed = relayNextNum
+      lastNumConfirmed = parseInt(result);
+      relayNextNum = lastNumConfirmed + 1;
+      firstRelayNumInGroup = relayNextNum;
       clearInterval(intervalID);
       intervalID = setInterval(storeLatestBlock, 2500);
     });
   })
-  // setInterval(RbGetBlockNum, 2500);
 }
 
-// function storeHeader() {
-//   // return new Promise((resolve, reject) => {
-//     var rb, header;
-//     Rbrelay.deployed().then(function(instance) {
-//       rb = instance;
-//       return rb.head.call();
-//     }).then(function(result) {
-//       return rb.rbchain.call(result);
-//     }).then(function(result) {
-//       relayLatestBlock = parseInt(result);
-//     });
-//   // });
-// }
-
-
-
-// function rinkebyGetLatestBlock() {
-//   return new Promise((resolve, reject) => {
-//     rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-//       if(result.number != rinkebyLatestBlock) {
-//         rinkebyLatestBlock = result.number;
-//       }
-//       resolve(result.number);
-//     });
-//   });
-// }
 function storeLatestBlock() {
   renderAll()
   try{
     rb.head.call().then(function(_head) {
-        return rb.rbchain.call(_head);
+      return rb.rbchain.call(_head);
     }).then(function(_headNum) {
-      // console.log("relayNextNum , _headNum", relayNextNum, parseInt(_headNum))
       if(relayNextNum > parseInt(_headNum) + 5){
+        newRelayGroup = false;
         relay();
       }else{
         rinkebyWeb3.eth.getBlock("latest", (err,result) => {
@@ -151,22 +127,23 @@ function storeLatestBlock() {
             newRbLatest = true;
           }
           if(relayNextNum <= rbLatest && !txSent[relayNextNum]) {
-              constructHeader(relayNextNum).then(function(header){
-                nonce++;
-                txSent[relayNextNum] = true;
-                // renderTxRequest(relayNextNum)
-                relayNextNum++;
-                return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, gasPrice: gasPrice, from: provider.getAddress()});
-              }).then(function(tx) {
-                return rb.head.call();
-              }).then((hash)=>{
-                return rb.rbchain.call(hash);
-              }).then(function(currentNumConfirmed) {
-                lastNumConfirmed = currentNumConfirmed;
-                newNumConfirmed = true;
-              }).catch((error)=>{ })
-          } else {
-            console.log("didn't store block: relayNext, rbLatest", relayNextNum, rbLatest)
+            if(!txInGroup[relayNextNum]) {
+              newRelayGroup = true;
+              txInGroup[relayNextNum] = true;
+            }
+            constructHeader(relayNextNum).then(function(header){
+              nonce++;
+              txSent[relayNextNum] = true;
+              relayNextNum++;
+              return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, gasPrice: gasPrice, from: provider.getAddress()});
+            }).then(function(tx) {
+              return rb.head.call();
+            }).then((hash)=>{
+              return rb.rbchain.call(hash);
+            }).then(function(currentNumConfirmed) {
+              lastNumConfirmed = currentNumConfirmed;
+              newNumConfirmed = true;
+            }).catch((error)=>{})
           }
         })
       }
@@ -183,7 +160,11 @@ function renderAll(){
 }
 
 function renderTxRequest(){
-  return chalk.white("Requesting to store BlkNum: ") + chalk.keyword('orange')(relayNextNum);
+  if(newRelayGroup){
+    return chalk.white("Requesting to store BlkNum: ") + chalk.keyword('orange').bold(relayNextNum);
+  }else{
+    return chalk.white("Requesting to store BlkNum: ") + chalk.grey(relayNextNum);
+  }
 }
 function renderConfirmation(){
   if(newNumConfirmed){
@@ -192,9 +173,6 @@ function renderConfirmation(){
   }else{
     return  chalk.white("Relay Head: ") + chalk.grey(lastNumConfirmed)
   }
-  // for (var i = lastNumConfirmed + 1; i <= currentNumConfirmed; i++) {
-  //   p = p + i + ", "
-  // }
 }
 function renderRinkebyBlockMined(){
   if(newRbLatest){
@@ -269,8 +247,6 @@ function relayReceipt(receipt, targetAddr) {
     rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr);
   });
 }
-
-
 
 function web3ify(input) {
   output = {}
