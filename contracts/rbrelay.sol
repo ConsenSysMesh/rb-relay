@@ -108,7 +108,7 @@ contract rbrelay {
     }
 
     // rawTx and parentNodes are rlp encoded
-    function relayTx(bytes rawTx, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) {
+    function relayTx(bytes rawTx, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
         require(msg.value >= relayPrice);
         require(verifyTrie(rawTx, path, parentNodes, headerBytes, 4));
 
@@ -117,7 +117,7 @@ contract rbrelay {
     }
 
     // receipt and parentNodes are rlp encoded
-    function relayReceipt(bytes receipt, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) {
+    function relayReceipt(bytes receipt, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
         require(msg.value >= relayPrice);
         require(verifyTrie(receipt, path, parentNodes, headerBytes, 5));
 
@@ -126,7 +126,7 @@ contract rbrelay {
     }
 
     // account and parentNodes are rlp encoded
-    function relayAccount(bytes account, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) {
+    function relayAccount(bytes account, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
         require(msg.value >= relayPrice);
         require(verifyTrie(account, path, parentNodes, headerBytes, 3));
 

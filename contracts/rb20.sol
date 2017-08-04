@@ -139,16 +139,3 @@ contract Rb20 is StandardToken {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
