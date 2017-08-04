@@ -13,7 +13,7 @@ contract('rbrelay', function(accounts) {
   var rb, t, proof;
 
   it("should set everything up correctly", function(done) {
-    ep.getTransactionProof('0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6').then(function(result) {
+    ep.getTransactionProof('0x40754f3aa02b781eaa00c80483d5714060c5253c2b22a190c5ca73e6deef734f').then(function(result) {
       proof = h.web3ify(result);
     }).then(function() {
       return rbrelay.deployed();
@@ -48,13 +48,12 @@ contract('rbrelay', function(accounts) {
     })
   })
 
-  it("should relay tx 0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6", function(done) {
+  it("should relay tx 0x40754f3aa02b781eaa00c80483d5714060c5253c2b22a190c5ca73e6deef734f", function(done) {
     rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, t.address).then(function(result) {
       // console.log("\nrelayTx:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
       return t.txDone.call();
     }).then(function(result) {
-      // console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isTrue(result, "done is not true");
     }).then(function() {
         done();

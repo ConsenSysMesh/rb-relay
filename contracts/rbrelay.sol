@@ -30,7 +30,7 @@ contract rbrelay {
     function storeBlockHeader(bytes headerBytes) {
         var (parentHash, blockNumber, unsignedHash, blockHash, r, s, v) = parseBlockHeader(headerBytes);
 
-        require(verifyHeader(parentHash, unsignedHash, blockHash, r, s, v));
+        require(verifyHeader(parentHash, unsignedHash, r, s, v));
 
         rbchain[blockHash] = blockNumber;
 
@@ -90,7 +90,7 @@ contract rbrelay {
         v = uint8(vWord)+27;
     }
 
-    function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) private constant returns (bool) {
+    function verifyHeader(bytes32 parentHash, bytes32 unsignedHash, bytes32 r, bytes32 s, uint8 v) private constant returns (bool) {
         if(rbchain[parentHash] == 0) {return false;}
 
         address miner = ecrecover(unsignedHash,v,r,s);
@@ -126,7 +126,7 @@ contract rbrelay {
     }
 
     // value and parentNodes are rlp encoded
-    function verifyTrie(bytes value, bytes path, bytes parentNodes, bytes headerBytes, uint8 trieIndex) private constant returns (bool) {
+    function verifyTrie(bytes value, bytes encodedPath, bytes parentNodes, bytes headerBytes, uint8 trieIndex) private constant returns (bool) {
         bytes32 blockHash = sha3(headerBytes);
 
         if(sha3(headerBytes) != blockHash) {return false;}
@@ -135,7 +135,7 @@ contract rbrelay {
         RLP.RLPItem[] memory rlpH = RLP.toList(RLP.toRLPItem(headerBytes));
         bytes32 txRoot = RLP.toBytes32(rlpH[trieIndex]);
 
-        if(!verifyMerkleProof(value, path, parentNodes, txRoot)) {return false;}
+        if(!verifyMerkleProof(value, encodedPath, parentNodes, txRoot)) {return false;}
 
         return true;
     }

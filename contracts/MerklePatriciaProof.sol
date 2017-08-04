@@ -36,33 +36,33 @@ library MerklePatriciaProof {
             if(nodeKey != sha3(currentNode)) {return false;}
             currentNodeList = RLP.toList(parentNodes[i]);
 
-              if(currentNodeList.length == 17) {
-                  if(pathPtr == path.length) {
+            if(currentNodeList.length == 17) {
+                if(pathPtr == path.length) {
                     if(sha3(RLP.toBytes(currentNodeList[16])) == sha3(value)) {
-                          return true;
+                        return true;
                     } else {
-                          return false;
-                    }
-                  }
-
-                  uint8 nextPathNibble = uint8(path[pathPtr]);
-                  if(nextPathNibble > 16) {return false;}
-                  nodeKey = RLP.toBytes32(currentNodeList[nextPathNibble]);
-                  pathPtr += 1;
-               } else if(currentNodeList.length == 2) {
-                pathPtr += nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr);
-                  
-                  if(pathPtr == path.length) {//leaf node
-                    if(sha3(RLP.toData(currentNodeList[1])) == sha3(value)) {
-                          return true;
-                    } else {
-                          return false;
-                    }
-                  }
-                  //extension node
-                  if(nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
                       return false;
-                  }
+                    }
+                }
+
+                uint8 nextPathNibble = uint8(path[pathPtr]);
+                if(nextPathNibble > 16) {return false;}
+                nodeKey = RLP.toBytes32(currentNodeList[nextPathNibble]);
+                pathPtr += 1;
+           	} else if(currentNodeList.length == 2) {
+           		pathPtr += nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr);
+              
+                if(pathPtr == path.length) {//leaf node
+                    if(sha3(RLP.toData(currentNodeList[1])) == sha3(value)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                //extension node
+                if(nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
+                    return false;
+                }
 
                 nodeKey = RLP.toBytes32(currentNodeList[1]);
             } else {
@@ -80,11 +80,9 @@ library MerklePatriciaProof {
 
         // pathPtr counts nibbles in path
         // partialPath.length is a number of nibbles
-        if(pathPtr+partialPath.length < path.length) {
-            for(uint i=pathPtr+1; i<=pathPtr+partialPath.length; i++) {
-                byte pathNibble = path[i];
-                slicedPath[i-pathPtr-1] = pathNibble;
-            }
+        for(uint i=pathPtr; i<pathPtr+partialPath.length; i++) {
+            byte pathNibble = path[i];
+            slicedPath[i-pathPtr] = pathNibble;
         }
 
         if(sha3(partialPath) == sha3(slicedPath)) {

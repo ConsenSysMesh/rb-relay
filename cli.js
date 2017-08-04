@@ -13,7 +13,7 @@ const args = process.argv.slice(2);
 const command = args[0];
 const option1 = args[1];
 const option2 = args[2];
-const hex = /0x[a-f0-9]{64}/i;
+const hex = /0x[a-f0-9]/i;
 
 const numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
 const stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input), 'hex') }
@@ -35,9 +35,9 @@ if(fs.existsSync("secrets.json")) {
 
 const HDWalletProvider = require("truffle-hdwallet-provider");
 const Rbrelay = Contract(require('./build/contracts/rbrelay.json'))
-// const rbrelay = Contract(Rbrelay);
 const provider = new HDWalletProvider(mnemonic, "https://ropsten.infura.io/");
-Rbrelay.setProvider(provider);
+Rbrelay.setProvider(provider)
+
 
 var rinkebyLatestBlock, relayLatestBlock;
 
@@ -72,7 +72,7 @@ switch(command) {
 function checkOptions(option1, option2, id) {
   if(!hex.test(option1) || option1.length != 66 ||
      !hex.test(option2) || option2.length != 42) {
-    console.log("Usage: rbrelay " + id==0?"tx":"receipt" + " [txHash] [targetAddr]");
+    console.log("Usage: rbrelay " + (id==0?"tx":"receipt") + " [txHash] [targetAddr]");
     return false;
   }
   return true;
@@ -107,7 +107,8 @@ function relay() {
       firstRelayNumInGroup = relayNextNum;
       clearInterval(intervalID);
       intervalID = setInterval(storeLatestBlock, 2500);
-    });
+    })
+    .catch((err) => console.log(`THIS IS THE ERROR: `, err));
   })
 }
 
@@ -227,33 +228,51 @@ function relayTx(txHash, targetAddr) {
   ep.getTransactionProof(txHash).then(function(result) {
     proof = web3ify(result);
   }).then(function() {
-    return rbrelay.deployed();
+    return Rbrelay.deployed();
   }).then(function(instance) {
     rb = instance;
+    return rb.head.call();
+  }).then(function(result) {
+    return rb.rbchain.call(result);
+  }).then(function(result) {
+    if(proof.header.blockNumber > result) {
+      console.log("tx is too recent");
+    }
   }).then(function() {
-    rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr);
+    return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, from: provider.getAddress()});
+  }).then(function(result) {
+    console.log(JSON.stringify(result));
   });
 }
 
-function relayReceipt(receipt, targetAddr) {
+function relayReceipt(txHash, targetAddr) {
   var proof, rb;
-  ep.getReceiptProof(receipt).then(function(result) {
+  ep.getReceiptProof(txHash).then(function(result) {
     proof = web3ify(result);
   }).then(function() {
-    return rbrelay.deployed();
+    return Rbrelay.deployed();
   }).then(function(instance) {
     rb = instance;
+    return rb.head.call();
+  }).then(function(result) {
+    return rb.rbchain.call(result);
+  }).then(function(result) {
+    if(proof.header.blockNumber > result) {
+      console.log("tx is too recent");
+    }
   }).then(function() {
-    rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr);
+    return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, from: provider.getAddress()});
+  }).then(function(result) {
+    console.log(JSON.stringify(result));
   });
 }
 
-function web3ify(input) {
+var web3ify = (input) => {
   output = {}
   output.value = '0x' + rlp.encode(input.value).toString('hex')
   output.header = '0x' + rlp.encode(input.header).toString('hex')
-  output.path = input.path.toString('hex')
-  output.path = (output.path.length%2==0 ? '0x00' : '0x1') + output.path
+  output.path = '0x00' + input.path.toString('hex')
+  //output.path = (output.path.length%2==0 ? '0x00' : '0x1') + output.path
   output.parentNodes = '0x' + rlp.encode(input.parentNodes).toString('hex')
   output.txRoot = '0x' + input.header[4].toString('hex')
   output.blockHash = '0x' + input.blockHash.toString('hex')
