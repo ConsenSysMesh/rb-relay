@@ -1,6 +1,3 @@
-const Web3 = require('web3')
-const web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io"))
-
 var target = artifacts.require("./Target.sol");
 var rbrelay = artifacts.require("./rbrelay.sol");
 

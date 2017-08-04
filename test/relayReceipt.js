@@ -48,13 +48,13 @@ contract('rbrelay', function(accounts) {
     })
   })
 
-  it("should relay tx 0x40754f3aa02b781eaa00c80483d5714060c5253c2b22a190c5ca73e6deef734f", function(done) {
+  it("should relay receipt 0x40754f3aa02b781eaa00c80483d5714060c5253c2b22a190c5ca73e6deef734f", function(done) {
     rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address).then(function(result) {
       console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
       return t.receiptDone.call();
     }).then(function(result) {
-      console.log("done:\n" + JSON.stringify(result) + "\n");
+      // console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isTrue(result, "done is not true");
     }).then(function() {
         done();
