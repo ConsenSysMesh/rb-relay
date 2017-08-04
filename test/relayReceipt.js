@@ -27,7 +27,7 @@ contract('rbrelay', function(accounts) {
       return target.deployed();
     }).then(function(instance) {
       t = instance;
-      return t.receipts.call("0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6" );
+      return t.receiptDone.call();
     }).then(function(result) {
       // console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isFalse(result, "done is not false");
@@ -48,13 +48,13 @@ contract('rbrelay', function(accounts) {
     })
   })
 
-  it("should relay tx 0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6", function(done) {
+  it("should relay receipt for tx 0x0901fd2fa414594b57b512983764ba66cb33d534d0048f60d796f1ef5c3e04f6", function(done) {
     rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address).then(function(result) {
       // console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
-      return t.receipt.call();
+      return t.receiptDone.call();
     }).then(function(result) {
-      console.log("done:\n" + JSON.stringify(result) + "\n");
+      // console.log("done:\n" + JSON.stringify(result) + "\n");
       assert.isTrue(result, "done is not true");
     }).then(function() {
         done();
