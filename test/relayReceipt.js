@@ -49,7 +49,7 @@ contract('rbrelay', function(accounts) {
   })
 
   it("should relay receipt 0x40754f3aa02b781eaa00c80483d5714060c5253c2b22a190c5ca73e6deef734f", function(done) {
-    rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address).then(function(result) {
+    rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address, {value: web3.toWei(0.1,'ether')}).then(function(result) {
       console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
       return t.receiptDone.call();
