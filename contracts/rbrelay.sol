@@ -37,13 +37,13 @@ contract rbrelay {
         var (parentHash, blockNumber, unsignedHash, blockHash, r, s, v) = parseBlockHeader(headerBytes);
 
         require(verifyHeader(parentHash, unsignedHash, r, s, v));
-
+        require(rbchain[blockHash] == 0);
         rbchain[blockHash] = blockNumber;
 
         if(blockNumber > rbchain[parentHash]) {
             head = blockHash;
-            //mint();
         }
+        mint();
     }
 
     function parseBlockHeader(bytes headerBytes) private constant returns (bytes32 parentHash, uint blockNumber, bytes32 unsignedHash, bytes32 blockHash, bytes32 r, bytes32 s, uint8 v) {
@@ -110,7 +110,7 @@ contract rbrelay {
 
     // rawTx and parentNodes are rlp encoded
     function relayTx(bytes rawTx, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
-        require(verifyTrie(rawTx, path, parentNodes, headerBytes, 4));
+        require(_valueInTrieIndex(rawTx, path, parentNodes, headerBytes, 4));
         require(msg.value >= relayPrice);
 
         Target t = Target(targetAddr);
@@ -119,7 +119,7 @@ contract rbrelay {
 
     // receipt and parentNodes are rlp encoded
     function relayReceipt(bytes receipt, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
-        require(verifyTrie(receipt, path, parentNodes, headerBytes, 5));
+        require(_valueInTrieIndex(receipt, path, parentNodes, headerBytes, 5));
         require(msg.value >= relayPrice);
 
         Target t = Target(targetAddr);
@@ -128,7 +128,7 @@ contract rbrelay {
 
     // account and parentNodes are rlp encoded
     function relayAccount(bytes account, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
-        require(verifyTrie(account, path, parentNodes, headerBytes, 3));
+        require(_valueInTrieIndex(account, path, parentNodes, headerBytes, 3));
         require(msg.value >= relayPrice);
 
         Target t = Target(targetAddr);
@@ -136,7 +136,7 @@ contract rbrelay {
     }
 
     // value and parentNodes are rlp encoded
-    function verifyTrie(bytes value, bytes encodedPath, bytes parentNodes, bytes headerBytes, uint8 trieIndex) private constant returns (bool) {
+    function _valueInTrieIndex(bytes value, bytes encodedPath, bytes parentNodes, bytes headerBytes, uint8 trieIndex) private constant returns (bool) {
         bytes32 blockHash = sha3(headerBytes);
 
         if(sha3(headerBytes) != blockHash) {return false;}
@@ -145,13 +145,13 @@ contract rbrelay {
         RLP.RLPItem[] memory rlpH = RLP.toList(RLP.toRLPItem(headerBytes));
         bytes32 txRoot = RLP.toBytes32(rlpH[trieIndex]);
 
-        if(!verifyMerkleProof(value, encodedPath, parentNodes, txRoot)) {return false;}
+        if(!trieValue(value, encodedPath, parentNodes, txRoot)) {return false;}
 
         return true;
     }
 
-    function verifyMerkleProof(bytes value, bytes encodedPath, bytes parentNodes, bytes32 root) constant returns (bool) {
-        return MerklePatriciaProof.verifyProof(value, encodedPath, parentNodes, root);
+    function trieValue(bytes value, bytes encodedPath, bytes parentNodes, bytes32 root) constant returns (bool) {
+        return MerklePatriciaProof.verify(value, encodedPath, parentNodes, root);
     }
 
     function burn(uint256 _value) {

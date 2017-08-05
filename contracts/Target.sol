@@ -1,17 +1,19 @@
 pragma solidity ^0.4.11;
 
+import "./RLP.sol";
+
 contract Target {
-    bool public txDone;
-    bool public receiptDone;
-    bool public accountDone;
+    uint public numTransactionsProcessed;
+    uint public numReceiptsProcessed;
+    uint public numAccountsProcessed;
 
     function processTransaction(bytes rawTx) {
-        txDone = true;
+        numTransactionsProcessed++;
     }
     function processReceipt(bytes receipt) {
-        receiptDone = true;
+        numReceiptsProcessed++;
     }
     function processAccount(bytes account) {
-        accountDone = true;
+        numAccountsProcessed++;
     }
 }

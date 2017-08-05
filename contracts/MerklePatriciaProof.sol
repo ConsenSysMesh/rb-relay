@@ -16,7 +16,7 @@ library MerklePatriciaProof {
      * @param root The root hash of the trie.
      * @return The boolean validity of the proof.
      */
-    function verifyProof(bytes value, bytes encodedPath, bytes rlpParentNodes, bytes32 root) internal constant returns (bool) {
+    function verify(bytes value, bytes encodedPath, bytes rlpParentNodes, bytes32 root) internal constant returns (bool) {
         RLP.RLPItem memory item = RLP.toRLPItem(rlpParentNodes);
         RLP.RLPItem[] memory parentNodes = RLP.toList(item);
 
@@ -26,7 +26,7 @@ library MerklePatriciaProof {
         bytes32 nodeKey = root;
         uint pathPtr = 0;
 
-        bytes memory path = getNibbleArray(encodedPath);
+        bytes memory path = _getNibbleArray(encodedPath);
         if(path.length == 0) {return false;}
         
         for (uint i=0; i<parentNodes.length; i++) {
@@ -49,8 +49,8 @@ library MerklePatriciaProof {
                 if(nextPathNibble > 16) {return false;}
                 nodeKey = RLP.toBytes32(currentNodeList[nextPathNibble]);
                 pathPtr += 1;
-           	} else if(currentNodeList.length == 2) {
-           		pathPtr += nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr);
+            } else if(currentNodeList.length == 2) {
+            pathPtr += _nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr);
               
                 if(pathPtr == path.length) {//leaf node
                     if(sha3(RLP.toData(currentNodeList[1])) == sha3(value)) {
@@ -60,7 +60,7 @@ library MerklePatriciaProof {
                     }
                 }
                 //extension node
-                if(nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
+                if(_nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
                     return false;
                 }
 
@@ -71,11 +71,11 @@ library MerklePatriciaProof {
         }
     }
     
-    function nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) private constant returns (uint) {
+    function _nibblesToTraverse(bytes encodedPartialPath, bytes path, uint pathPtr) private constant returns (uint) {
         uint len;
         // encodedPartialPath has elements that are each two hex characters (1 byte), but partialPath
         // and slicedPath have elements that are each one hex character (1 nibble)
-        bytes memory partialPath = getNibbleArray(encodedPartialPath);
+        bytes memory partialPath = _getNibbleArray(encodedPartialPath);
         bytes memory slicedPath = new bytes(partialPath.length);
 
         // pathPtr counts nibbles in path
@@ -94,14 +94,14 @@ library MerklePatriciaProof {
     }
 
     // bytes b must be hp encoded
-    function getNibbleArray(bytes b) private constant returns (bytes) {
+    function _getNibbleArray(bytes b) private constant returns (bytes) {
         bytes memory nibbles;
         if(b.length>0) {
             uint8 offset;
-            uint8 hpNibble = uint8(getNthNibbleOfBytes(0,b));
+            uint8 hpNibble = uint8(_getNthNibbleOfBytes(0,b));
             if(hpNibble == 1 || hpNibble == 3) {
                 nibbles = new bytes(b.length*2-1);
-                byte oddNibble = getNthNibbleOfBytes(1,b);
+                byte oddNibble = _getNthNibbleOfBytes(1,b);
                 nibbles[0] = oddNibble;
                 offset = 1;
             } else {
@@ -110,13 +110,13 @@ library MerklePatriciaProof {
             }
 
             for(uint i=offset; i<nibbles.length; i++) {
-                nibbles[i] = getNthNibbleOfBytes(i-offset+2,b);
+                nibbles[i] = _getNthNibbleOfBytes(i-offset+2,b);
             }
         }
         return nibbles;
     }
 
-    function getNthNibbleOfBytes(uint n, bytes str) private constant returns (byte) {
+    function _getNthNibbleOfBytes(uint n, bytes str) private constant returns (byte) {
         return byte(n%2==0 ? uint8(str[n/2])/0x10 : uint8(str[n/2])%0x10);
     }
 }

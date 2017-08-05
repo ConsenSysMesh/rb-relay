@@ -5,6 +5,7 @@
   "dependencies": {
     "chalk": "^2.0.1",
     "eth-proof": "*",
+    "ethereumjs-block": "^1.6.0",
     "ethereumjs-util": "^5.1.2",
     "rlp": "^2.0.0",
     "truffle-contract": "^2.0.1",
