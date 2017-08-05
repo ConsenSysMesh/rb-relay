@@ -3,7 +3,7 @@ pragma solidity ^0.4.11;
 import "./RLP.sol";
 import "./RLPEncode.sol";
 import "./MerklePatriciaProof.sol";
-import "./rb20.sol";
+import "./Rb20.sol";
 import "./Target.sol";
 
 contract rbrelay {
@@ -15,7 +15,7 @@ contract rbrelay {
     uint relayPrice;
     Rb20 public rb20;
 
-    function rbrelay(bytes32 _startHash, uint startNum, address _rb20) {
+    function rbrelay(bytes32 _startHash, uint startNum) {
         if(_startHash==0) {
             startHash = 0x6341fd3daf94b748c72ced5a5b26028f2474f5f00d824504e4fa37a75767e177;
             rbchain[startHash] = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -24,8 +24,9 @@ contract rbrelay {
             rbchain[startHash] = startNum;
         }
         head = startHash;
+
         relayPrice = 100000000000000000;
-        rb20 = Rb20(_rb20);
+        rb20 = new Rb20(100, "Rbrelay Token", 1, "RBT", this);
 
         isSigner[0x42EB768f2244C8811C63729A21A3569731535f06] = true;
         isSigner[0x7ffC57839B00206D1ad20c69A1981b489f772031] = true;
@@ -41,7 +42,7 @@ contract rbrelay {
 
         if(blockNumber > rbchain[parentHash]) {
             head = blockHash;
-            mint();
+            //mint();
         }
     }
 
@@ -109,8 +110,8 @@ contract rbrelay {
 
     // rawTx and parentNodes are rlp encoded
     function relayTx(bytes rawTx, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
-        require(msg.value >= relayPrice);
         require(verifyTrie(rawTx, path, parentNodes, headerBytes, 4));
+        require(msg.value >= relayPrice);
 
         Target t = Target(targetAddr);
         t.processTransaction(rawTx);
@@ -118,8 +119,8 @@ contract rbrelay {
 
     // receipt and parentNodes are rlp encoded
     function relayReceipt(bytes receipt, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
-        require(msg.value >= relayPrice);
         require(verifyTrie(receipt, path, parentNodes, headerBytes, 5));
+        require(msg.value >= relayPrice);
 
         Target t = Target(targetAddr);
         t.processReceipt(receipt);
@@ -127,8 +128,8 @@ contract rbrelay {
 
     // account and parentNodes are rlp encoded
     function relayAccount(bytes account, bytes path, bytes parentNodes, bytes headerBytes, address targetAddr) payable {
-        require(msg.value >= relayPrice);
         require(verifyTrie(account, path, parentNodes, headerBytes, 3));
+        require(msg.value >= relayPrice);
 
         Target t = Target(targetAddr);
         t.processAccount(account);
@@ -157,7 +158,7 @@ contract rbrelay {
         uint reward = rb20.burn(msg.sender, _value, this.balance);
         require(msg.sender.send(reward));
     }
-    function mint() private{
+    function mint() private {
         rb20.mint(msg.sender, 1);
     }
 

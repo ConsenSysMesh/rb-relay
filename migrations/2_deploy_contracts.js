@@ -4,10 +4,7 @@ var rb20 = artifacts.require("./rb20.sol")
 
 module.exports = function(deployer) {
 	// web3.eth.getBlock("latest", (err,result) => {
-		deployer.deploy(rb20).then(function() {
-		    return deployer.deploy(rbrelay, "0x9cc20c925e71c1df0d409a6a25d9da2cb82ed3da95b76152a5082e0af35b5d47",617591,rb20.address/*result.hash, parseInt(result.number)*/);
-		}).then(function() {
-			return deployer.deploy(target);
-		});
+		deployer.deploy(rbrelay, "0xf74e9dbe971a9b3cc8fc2e8ab99dfc001436049c4ade777cf42fa99b1067dd4c", 617591);
+		deployer.deploy(target);
 	// });
 };

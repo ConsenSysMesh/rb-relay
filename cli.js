@@ -3,6 +3,7 @@
 const pkg = require("./package.json");
 const rlp = require('rlp');
 const Web3 = require('web3');
+const web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"))
 const Contract = require('truffle-contract');
 const EthProof = require('eth-proof');
 const chalk = require('chalk');
@@ -104,7 +105,6 @@ function relay() {
     }).then(function(result) {
       lastNumConfirmed = parseInt(result);
       relayNextNum = lastNumConfirmed + 1;
-      firstRelayNumInGroup = relayNextNum;
       clearInterval(intervalID);
       intervalID = setInterval(storeLatestBlock, 2500);
     })
@@ -239,7 +239,8 @@ function relayTx(txHash, targetAddr) {
       console.log("tx is too recent");
     }
   }).then(function() {
-    return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, from: provider.getAddress()});
+    console.log("You are being charged 0.1 ether!!!");
+    return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: web3.toWei(0.1,'ether'), from: provider.getAddress()});
   }).then(function(result) {
     console.log(JSON.stringify(result));
   });
@@ -261,7 +262,8 @@ function relayReceipt(txHash, targetAddr) {
       console.log("tx is too recent");
     }
   }).then(function() {
-    return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, from: provider.getAddress()});
+    console.log("You are being charged 0.1 ether!!!");
+    return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, value: web3.toWei(0.1,'ether'), from: provider.getAddress()});
   }).then(function(result) {
     console.log(JSON.stringify(result));
   });
@@ -272,7 +274,6 @@ var web3ify = (input) => {
   output.value = '0x' + rlp.encode(input.value).toString('hex')
   output.header = '0x' + rlp.encode(input.header).toString('hex')
   output.path = '0x00' + input.path.toString('hex')
-  //output.path = (output.path.length%2==0 ? '0x00' : '0x1') + output.path
   output.parentNodes = '0x' + rlp.encode(input.parentNodes).toString('hex')
   output.txRoot = '0x' + input.header[4].toString('hex')
   output.blockHash = '0x' + input.blockHash.toString('hex')
