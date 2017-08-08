@@ -3,7 +3,7 @@
 const pkg = require("./package.json");
 const rlp = require('rlp');
 const Web3 = require('web3');
-const web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"))
+// const web3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"))
 const Contract = require('truffle-contract');
 const EthProof = require('eth-proof');
 const chalk = require('chalk');
@@ -16,12 +16,29 @@ const option1 = args[1];
 const option2 = args[2];
 const hex = /0x[a-f0-9]/i;
 
+var nonce;
+var relayNextNum;
+var txInGroup = {};
+var newRelayGroup;
+var txSent = {};
+var intervalID;
+var rb;
+var rbt;
+var gasPrice = 25000000000;
+var rinkebyHead;
+var newRinkebyHead = false;
+var relayHeadNum;
+var newRelayHeadNum = true;
+var coinbaseETH;
+var startTime = new Date();
+
+
 const numToBuf = (input)=>{ return new Buffer(byteable(input.toString(16)), 'hex') }
 const stringToBuf = (input)=>{ input=input.slice(2); return new Buffer(byteable(input), 'hex') }
 const byteable = (input)=>{ return input.length % 2 == 0 ? input : '0' + input }
 
 const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
-const ropstenWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
+const relayWeb3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/"));
 
 const fs = require('fs');
 var secrets;
@@ -35,12 +52,14 @@ if(fs.existsSync("secrets.json")) {
 }
 
 const HDWalletProvider = require("truffle-hdwallet-provider");
+const Rb20 = Contract(require('./build/contracts/rb20.json'))
 const Rbrelay = Contract(require('./build/contracts/rbrelay.json'))
-const provider = new HDWalletProvider(mnemonic, "https://ropsten.infura.io/");
-Rbrelay.setProvider(provider)
+const relayProvider = new HDWalletProvider(mnemonic, "https://ropsten.infura.io/");
+Rbrelay.setProvider(relayProvider)
+Rb20.setProvider(relayProvider)
 
 
-var rinkebyLatestBlock, relayLatestBlock;
+// var rinkebyLatestBlock, relayLatestBlock;  
 
 switch(command) {
   case "version":
@@ -49,7 +68,7 @@ switch(command) {
 
   case "start":
     console.log("Doing something awesome...")
-    relay();
+    initVars().then(relay);
     break;
 
   case "tx":
@@ -79,32 +98,58 @@ function checkOptions(option1, option2, id) {
   return true;
 }
 
-var nonce;
-var relayNextNum;
-var txInGroup = {};
-var newRelayGroup = true;
-var txSent = {};
-var intervalID;
-var rb;
-var gasPrice = 25000000000;
-var rbLatest;
-var newRbLatest = false;
-var lastNumConfirmed;
-var newNumConfirmed = true;
-
-function relay() {
-  gasPrice++;
-  ropstenWeb3.eth.getTransactionCount(provider.getAddress(), function(e,_nonce){
-    nonce = _nonce - 1;
-    txSent = {};
+function initVars(){
+  return new Promise ((accept, reject) => {
     Rbrelay.deployed().then(function(instance) {
       rb = instance;
       return rb.head.call();
-    }).then(function(result) {
-      return rb.rbchain.call(result);
-    }).then(function(result) {
-      lastNumConfirmed = parseInt(result);
-      relayNextNum = lastNumConfirmed + 1;
+    }).then(function(_headHash) {
+      // console.log("HEAD: ", result)
+      return rb.rbchain.call(_headHash);
+    }).then(function(_headNum) {
+      startRelayHeadNum = parseInt(_headNum)
+      relayHeadNum = startRelayHeadNum
+      relayNextNum = relayHeadNum + 1;
+      return rb.rb20.call()
+    }).then((_rb20Address)=>{
+
+      relayWeb3.eth.getBalance(relayProvider.getAddress(), function(e,r){
+        coinbaseETH = Math.round(r/(relayWeb3.toWei(1,"ether")));
+        rb20 = Rb20.at(_rb20Address)
+        // console.log(rb20.address)
+        renderInit()
+        accept()
+      })
+      // get coinbase eth balance
+      // rinkebyWeb3.eth.getBlock("latest", (err,result) => {
+
+
+    })
+  })
+}
+
+function renderInit(){
+    console.log("RBT Address:\t", chalk.blue.bold(rb20.address))
+    console.log("Relay Address:\t", chalk.yellow.bold(rb.address))
+    console.log("Your Coinbase:\t", chalk.green.bold( relayProvider.getAddress()+" ETH: "+ coinbaseETH ))
+}
+
+
+function relay() {
+  gasPrice++;
+  relayWeb3.eth.getTransactionCount(relayProvider.getAddress(), function(e,_nonce){
+    nonce = _nonce - 1;
+    txSent = {};
+    rb.rb20.call().then(function(result) {
+    //   return rb.head.call();
+    // }).then(function(result) {
+    //   // console.log("HEAD: ", result)
+    //   return rb.rbchain.call(result);
+    // }).then(function(result) {
+    //   // console.log("rbChain(HEAD): ", result)
+    //   relayHeadNum = parseInt(result);
+      relayNextNum = relayHeadNum + 1;
+      // console.log("WHY:", relayNextNum, relayHeadNum)
       clearInterval(intervalID);
       intervalID = setInterval(storeLatestBlock, 2500);
     })
@@ -123,11 +168,11 @@ function storeLatestBlock() {
         relay();
       }else{
         rinkebyWeb3.eth.getBlock("latest", (err,result) => {
-          if (rbLatest != parseInt(result.number)){
-            rbLatest = parseInt(result.number);
-            newRbLatest = true;
+          if (rinkebyHead != parseInt(result.number)){
+            rinkebyHead = parseInt(result.number);
+            newRinkebyHead = true;
           }
-          if(relayNextNum <= rbLatest && !txSent[relayNextNum]) {
+          if(relayNextNum <= rinkebyHead && !txSent[relayNextNum]) {
             if(!txInGroup[relayNextNum]) {
               newRelayGroup = true;
               txInGroup[relayNextNum] = true;
@@ -136,14 +181,14 @@ function storeLatestBlock() {
               nonce++;
               txSent[relayNextNum] = true;
               relayNextNum++;
-              return rb.storeBlockHeader(header, {nonce: nonce, gas: 200000, gasPrice: gasPrice, from: provider.getAddress()});
+              return rb.storeBlockHeader(header, {nonce: nonce, gas: 250000, gasPrice: gasPrice, from: relayProvider.getAddress()});
             }).then(function(tx) {
               return rb.head.call();
             }).then((hash)=>{
               return rb.rbchain.call(hash);
             }).then(function(currentNumConfirmed) {
-              lastNumConfirmed = currentNumConfirmed;
-              newNumConfirmed = true;
+              relayHeadNum = currentNumConfirmed;
+              newRelayHeadNum = true;
             }).catch((error)=>{})
           }
         })
@@ -153,34 +198,39 @@ function storeLatestBlock() {
 }
 
 function renderAll(){
-  var str = chalk.dim(new Date().toUTCString()) + " \t";
+  var str = chalk.dim(new Date().toISOString()) + " \t";
+  str += renderRinkebyBlockMined() + " \t";
   str += renderTxRequest() + " \t";
   str += renderConfirmation() + " \t";
-  str += renderRinkebyBlockMined();
+  str += renderRelayRate() + " \t";
   console.log(str)
 }
+function renderRelayRate(){
+  return (new Date() - startTime)/(1000*(relayHeadNum - startRelayHeadNum)) + " sec/headStored"
+}
+
 
 function renderTxRequest(){
   if(newRelayGroup){
-    return chalk.white("Requesting to store BlkNum: ") + chalk.keyword('orange').bold(relayNextNum);
+    return chalk.white("Broadcasting:") + chalk.keyword('orange').bold(relayNextNum);
   }else{
-    return chalk.white("Requesting to store BlkNum: ") + chalk.grey(relayNextNum);
+    return chalk.white("Broadcasting:") + chalk.grey(relayNextNum);
   }
 }
 function renderConfirmation(){
-  if(newNumConfirmed){
-    newNumConfirmed = false;
-    return  chalk.white("Relay Head: ") + chalk.green.bold(lastNumConfirmed)
+  if(newRelayHeadNum){
+    newRelayHeadNum = false;
+    return  chalk.white("Relay Head: ") + chalk.green.bold(relayHeadNum)
   }else{
-    return  chalk.white("Relay Head: ") + chalk.grey(lastNumConfirmed)
+    return  chalk.white("Relay Head: ") + chalk.grey(relayHeadNum)
   }
 }
 function renderRinkebyBlockMined(){
-  if(newRbLatest){
-    newRbLatest = false
-    return chalk.white("Current Rinkeby Head: ") + chalk.red.bold(rbLatest)
+  if(newRinkebyHead){
+    newRinkebyHead = false
+    return chalk.white("Rinkeby Head:    ") + chalk.red.bold(rinkebyHead)
   }else{
-    return chalk.white("Current Rinkeby Head: ") + chalk.grey(rbLatest)
+    return chalk.white("Rinkeby Head:    ") + chalk.grey(rinkebyHead)
   }
 }
 
@@ -240,7 +290,7 @@ function relayTx(txHash, targetAddr) {
     }
   }).then(function() {
     console.log("You are being charged 0.1 ether!!!");
-    return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: web3.toWei(0.1,'ether'), from: provider.getAddress()});
+    return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
   }).then(function(result) {
     console.log(JSON.stringify(result));
   });
@@ -263,7 +313,7 @@ function relayReceipt(txHash, targetAddr) {
     }
   }).then(function() {
     console.log("You are being charged 0.1 ether!!!");
-    return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, value: web3.toWei(0.1,'ether'), from: provider.getAddress()});
+    return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
   }).then(function(result) {
     console.log(JSON.stringify(result));
   });

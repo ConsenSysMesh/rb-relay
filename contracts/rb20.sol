@@ -98,15 +98,14 @@ contract Rb20 is StandardToken {
         uint256 _initialAmount,
         string _tokenName,
         uint8 _decimalUnits,
-        string _tokenSymbol,
-        address _owner
+        string _tokenSymbol
         ) {
-        balances[msg.sender] = _initialAmount;               // Give the creator all initial tokens
+        // balances[msg.sender] = _initialAmount;               // Give the creator all initial tokens
         totalSupply = _initialAmount;                        // Update total supply
         name = _tokenName;                                   // Set the name for display purposes
         decimals = _decimalUnits;                            // Amount of decimals for display purposes
         symbol = _tokenSymbol;                              // Set the symbol for display purposes
-        owner = _owner;  
+        owner = msg.sender;
         }
 
     /* Approves and then calls the receiving contract */
@@ -123,9 +122,9 @@ contract Rb20 is StandardToken {
     
     //rb additions below
     modifier onlyOwner(){ if(msg.sender == owner){ _; }else{ throw; } }
-    function mint(address _to, uint256 _value) onlyOwner{
-            balances[_to] += _value;
-            totalSupply += _value;
+    function mint(address _to) onlyOwner{
+            balances[_to] += 1;
+            totalSupply += 1;
     }
     function burn(address _from, uint256 _value, uint256 _weiBacking) onlyOwner returns(uint256){
         if (balances[_from] >= _value) {

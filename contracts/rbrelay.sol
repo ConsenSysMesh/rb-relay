@@ -26,7 +26,7 @@ contract rbrelay {
         head = startHash;
 
         relayPrice = 100000000000000000;
-        rb20 = new Rb20(100, "Rbrelay Token", 1, "RBT", this);
+        rb20 = new Rb20(1, "RBT", 1, "RBT");
 
         isSigner[0x42EB768f2244C8811C63729A21A3569731535f06] = true;
         isSigner[0x7ffC57839B00206D1ad20c69A1981b489f772031] = true;
@@ -159,7 +159,7 @@ contract rbrelay {
         require(msg.sender.send(reward));
     }
     function mint() private {
-        rb20.mint(msg.sender, 1);
+        rb20.mint(msg.sender);
     }
 
 }

@@ -43,7 +43,7 @@ contract('Rbrelay', function(accounts) {
 
   it("should not store block prior to start header because genesis is defined starting there", function(done) {
     h.getRinkebyHeader(startHeadNum -1 , web3).then(function(headerString) {
-      return rb.storeBlockHeader(headerString)
+      return rb.storeBlockHeader(headerString, {gas: 200000, gasPrice: 20000000000})
     }).then(function() {
       assert.isTrue(false, "should throw error while trying to storeBlockHeader")
     }).catch((e)=>{ done() })
@@ -53,6 +53,7 @@ contract('Rbrelay', function(accounts) {
     var headerString;
     h.getRinkebyHeader(startHeadNum+1, web3).then(function(_headerString) {
       headerString = _headerString
+      // console.log(headerString)
       return rb.storeBlockHeader(headerString)
     }).then(function() {
       return rb.head.call()
@@ -74,8 +75,8 @@ contract('Rbrelay', function(accounts) {
     var proof;
     ep.getReceiptProof(tx0).then(function(result) {
       proof = h.web3ify(result);
+      // console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
       return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address, {value: web3.toWei(0.1,'ether')})
-      console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
       return t.numReceiptsProcessed.call();
     }).then(function(result) {
@@ -88,8 +89,8 @@ contract('Rbrelay', function(accounts) {
     var proof;
     ep.getReceiptProof(tx1).then(function(result) {
       proof = h.web3ify(result);
+      // console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
       return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, t.address, {value: web3.toWei(0.1,'ether')})
-      console.log("\nrelayReceipt:\n" + JSON.stringify(result) + "\n");
     }).then(function() {
       return t.numReceiptsProcessed.call();
     }).then(function(result) {
