@@ -25,8 +25,8 @@ module.exports = function serveHeaders(relayProvider){
   var rb;
   var rbt;
   var gasPrice = 25000000000;
-  var rinkebyHead;
-  var newRinkebyHead = false;
+  var rinkebyHead = 0;
+  var greatestRinkebyHead = 0;
   var confirmedRelayHeadNum;
   var greatestConfirmedRelayHeadNum = 0;
   var coinbaseETH;
@@ -98,7 +98,6 @@ module.exports = function serveHeaders(relayProvider){
           rinkebyWeb3.eth.getBlock("latest", (err,result) => {
             if (rinkebyHead != parseInt(result.number)){
               rinkebyHead = parseInt(result.number);
-              newRinkebyHead = true;
             }
             if(broadcastRelayHeadNum <= rinkebyHead && !txSent[broadcastRelayHeadNum]) {
               if(!txInGroup[broadcastRelayHeadNum]) {
@@ -158,8 +157,8 @@ module.exports = function serveHeaders(relayProvider){
     }
   }
   function renderRinkebyBlockMined(){
-    if(newRinkebyHead){
-      newRinkebyHead = false
+    if(greatestRinkebyHead < rinkebyHead){
+      greatestRinkebyHead = rinkebyHead
       return chalk.white("Rinkeby Head: ") + chalk.red.bold(rinkebyHead)
     }else{
       return chalk.white("Rinkeby Head: ") + chalk.grey(rinkebyHead)
