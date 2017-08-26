@@ -56,7 +56,7 @@ module.exports = function serveHeaders(relayProvider){
       // }).then((_rb20Address)=>{
         
         relayWeb3.eth.getBalance(relayProvider.getAddress(), function(e,_coinbaseETH){
-          coinbaseETH = Math.round(_coinbaseETH/(relayWeb3.toWei(1,"ether")));
+          coinbaseETH = Math.round(_coinbaseETH*100/(relayWeb3.toWei(1,"ether")))/100;
           relayWeb3.eth.getBalance(rb.address, function(e,_rbBalance){
             rbBalance = parseInt(_rbBalance)
             renderInit()

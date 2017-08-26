@@ -13,6 +13,25 @@ const option1 = args[1];
 const option2 = args[2];
 const hex = /0x[a-f0-9]/i;
 
+const EthProof = require('eth-proof');
+  const ep = new EthProof(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
+
+const rlp      = require('rlp');
+const Contract = require('truffle-contract');
+const Rb20     = Contract(require('./build/contracts/rb20.json'))
+const Rbrelay  = Contract(require('./build/contracts/rbrelay.json'))
+const Target   = Contract(require('./build/contracts/Target.json'))
+
+// Rbrelay.setProvider
+// console.log(ep)
+  var relayProvider = getWalletProvider("ropsten")
+  const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
+  const relayWeb3 = new Web3(relayProvider);
+  Rbrelay.setProvider(relayProvider)
+  Rb20.setProvider(relayProvider)
+  Target.setProvider(relayProvider)
+
+
 renderTitle()
 switch(command) {
   case "version":
@@ -61,15 +80,6 @@ function getWalletProvider(network = "ropsten"){
   return new HDWalletProvider(mnemonic, "https://"+network+".infura.io/");
 }
 
-// function renderTitle(){
-//   var str = ""
-//   str +=" ____  ____      ____  ____  __     __   _  _ \n"
-//   str +="(  _ \\(  _ \\ ___(  _ \\(  __)(  )   / _\\ ( \\/ )\n"
-//   str +=" )   / ) _ ((___))   / ) _) / (_/\\/    \\ )  / \n"
-//   str +="(__\\_)(____/    (__\\_)(____)\\____/\\_/\\_/(__/  \n"
-//   console.log(str)
-// }
-
 function renderTitle(){
   var str = ""
   
@@ -83,41 +93,48 @@ function renderTitle(){
 
   console.log(chalk.green(str))
 }
-  // var web3ify = (input) => {
-  //   output = {}
-  //   output.value = '0x' + rlp.encode(input.value).toString('hex')
-  //   output.header = '0x' + rlp.encode(input.header).toString('hex')
-  //   output.path = '0x00' + input.path.toString('hex')
-  //   output.parentNodes = '0x' + rlp.encode(input.parentNodes).toString('hex')
-  //   output.txRoot = '0x' + input.header[4].toString('hex')
-  //   output.blockHash = '0x' + input.blockHash.toString('hex')
-  //   return output
-  // }
+  var web3ify = (input) => {
+    output = {}
+    output.value = '0x' + rlp.encode(input.value).toString('hex')
+    output.header = '0x' + rlp.encode(input.header).toString('hex')
+    output.path = '0x00' + input.path.toString('hex')
+    output.parentNodes = '0x' + rlp.encode(input.parentNodes).toString('hex')
+    output.txRoot = '0x' + input.header[4].toString('hex')
+    output.blockHash = '0x' + input.blockHash.toString('hex')
+    return output
+  }
 
-  // const ep = new EthProof(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
 
-  // function relayTx(txHash, targetAddr) {
-  //   var proof, rb;
-  //   ep.getTransactionProof(txHash).then(function(result) {
-  //     proof = web3ify(result);
-  //   }).then(function() {
-  //     return Rbrelay.deployed();
-  //   }).then(function(instance) {
-  //     rb = instance;
-  //     return rb.head.call();
-  //   }).then(function(result) {
-  //     return rb.rbchain.call(result);
-  //   }).then(function(result) {
-  //     if(proof.header.blockNumber > result) {
-  //       console.log("tx is too recent");
-  //     }
-  //   }).then(function() {
-  //     console.log("You are being charged 0.1 ether!!!");
-  //     return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
-  //   }).then(function(result) {
-  //     console.log(JSON.stringify(result));
-  //   });
-  // }
+
+
+  function relayTx(txHash, targetAddr) {
+    var proof, rb;
+    ep.getTransactionProof(txHash).then(function(result) {
+      proof = web3ify(result);
+    }).then(function() {
+      return Rbrelay.deployed();
+    }).then(function(instance) {
+      rb = instance;
+      return rb.head.call();
+    }).then(function(result) {
+      return rb.rbchain.call(result);
+    }).then(function(result) {
+      if(proof.header.blockNumber > result) {
+        console.log("tx is too recent");
+      }
+    }).then(function() {
+      console.log("You are being charged 0.1 ether!!!");
+      return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
+    }).then(function(result) {
+      console.log(JSON.stringify(result) + "\n");
+      return Target.deployed()
+    }).then(function(instance) {
+      var target = instance;
+      return target.numTransactionsProcessed();
+    }).then(function(_numTransactionsProcessed) {
+      console.log(_numTransactionsProcessed.toNumber())
+    }).catch((e)=>{console.log(e)});
+  }
 
   // function relayReceipt(txHash, targetAddr) {
   //   var proof, rb;
