@@ -127,6 +127,7 @@ function renderTitle(){
       return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
     }).then(function(result) {
       console.log(JSON.stringify(result) + "\n");
+      console.log(JSON.stringify(rlp.decode(proof.value)) + "\n");
       return Target.deployed()
     }).then(function(instance) {
       var target = instance;
@@ -158,3 +159,5 @@ function renderTitle(){
   //     console.log(JSON.stringify(result));
   //   });
   // }
+
+
