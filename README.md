@@ -9,6 +9,7 @@ todo: cli:
     each line show gasPrice, nonce, accountBalance, totalSupply, ETHbalance
     make it all green if its within 100 blocks, yellow if within 1000
     show the current speed or relaying. success rate ()
+    command for creating secrets.json
 
   make secrets.json command
 
@@ -30,3 +31,5 @@ issue:
   2017-08-11T02:46:08.502Z  Rinkeby Head: 693873  Broadcasting: 3   Relay Head: 618295  10.22 sec/headStored
   2017-08-11T02:46:11.002Z  Rinkeby Head: 693873  Broadcasting: 4   Relay Head: 618295  10.24 sec/headStored
 
+
+new Target at : 0x79373CecBeE4263CB43907a5d637e4eEE0Ce16Da
