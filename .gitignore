@@ -4,3 +4,4 @@ secrets.json
 *.log
 build
 archive
+notes.txt
