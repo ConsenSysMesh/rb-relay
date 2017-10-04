@@ -1,0 +1,100 @@
+{
+  "contract_name": "Target",
+  "abi": [
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "account",
+          "type": "bytes"
+        }
+      ],
+      "name": "processAccount",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "numTransactionsProcessed",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "rawTx",
+          "type": "bytes"
+        }
+      ],
+      "name": "processTransaction",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "numReceiptsProcessed",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "numAccountsProcessed",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "receipt",
+          "type": "bytes"
+        }
+      ],
+      "name": "processReceipt",
+      "outputs": [],
+      "payable": false,
+      "type": "function"
+    }
+  ],
+  "unlinked_binary": "0x6060604052341561000c57fe5b5b6102308061001c6000396000f3006060604052361561005c5763ffffffff60e060020a600035041663127f290c811461005e57806338fc24b2146100b657806346e2cc09146100d857806350013ce914610130578063a82980a014610152578063e112be8014610174575bfe5b341561006657fe5b6100b4600480803590602001908201803590602001908080601f016020809104026020016040519081016040528093929190818152602001838380828437509496506101cc95505050505050565b005b34156100be57fe5b6100c66101d9565b60408051918252519081900360200190f35b34156100e057fe5b6100b4600480803590602001908201803590602001908080601f016020809104026020016040519081016040528093929190818152602001838380828437509496506101df95505050505050565b005b341561013857fe5b6100c66101ec565b60408051918252519081900360200190f35b341561015a57fe5b6100c66101f2565b60408051918252519081900360200190f35b341561017c57fe5b6100b4600480803590602001908201803590602001908080601f016020809104026020016040519081016040528093929190818152602001838380828437509496506101f895505050505050565b005b6002805460010190555b50565b60005481565b6000805460010190555b50565b60015481565b60025481565b60018054810190555b505600a165627a7a723058207e57d0901a845a32df00b8eb837cbdd9d0e9d44f86f7a54f9b502a0f93cd717f0029",
+  "networks": {
+    "3": {
+      "events": {},
+      "links": {},
+      "address": "0x5e8ef53f0fde5347ce873deb9dddfbf7b3411b5b",
+      "updated_at": 1501984413887
+    },
+    "42": {
+      "events": {},
+      "links": {},
+      "address": "0x03016b461216c29ea69375a3499aa95d75ca6dcb",
+      "updated_at": 1502139645551
+    }
+  },
+  "schema_version": "0.0.5",
+  "updated_at": 1502139645551
+}
