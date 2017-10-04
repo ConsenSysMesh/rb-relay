@@ -58,7 +58,7 @@ switch(command) {
       break;
     }
     if (option1.split(' ').length !== 12) {
-      console.log('please provide a 12 workd mnemonic')
+      console.log('please provide a 12 word mnemonic')
       break;
     }
     writeSecret(option1)
