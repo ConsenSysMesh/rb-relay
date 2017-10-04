@@ -53,7 +53,14 @@ switch(command) {
     relayReceipt(option1, option2);
     break;
   case "secret":
-    if (!option1) break;
+    if (!option1) {
+      console.log('please provide mnemonic with command')
+      break;
+    }
+    if (option1.split(' ').length !== 12) {
+      console.log('please provide a 12 workd mnemonic')
+      break;
+    }
     writeSecret(option1)
     .then(res => console.log('wrote mnemonic to ./secrets.json'))
     break;
