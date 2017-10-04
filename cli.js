@@ -14,7 +14,7 @@ const option2 = args[2];
 const hex = /0x[a-f0-9]/i;
 
 const EthProof = require('eth-proof');
-  const ep = new EthProof(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
+const ep = new EthProof(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
 
 const rlp      = require('rlp');
 const Contract = require('truffle-contract');
@@ -23,14 +23,12 @@ const Rbrelay  = Contract(require('./build/contracts/rbrelay.json'))
 const Target   = Contract(require('./build/contracts/Target.json'))
 
 // Rbrelay.setProvider
-// console.log(ep)
-  var relayProvider = getWalletProvider("ropsten")
-  const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
-  const relayWeb3 = new Web3(relayProvider);
-  Rbrelay.setProvider(relayProvider)
-  Rb20.setProvider(relayProvider)
-  Target.setProvider(relayProvider)
-
+var relayProvider = getWalletProvider("ropsten")
+const rinkebyWeb3 = new Web3(new Web3.providers.HttpProvider("https://rinkeby.infura.io/"));
+const relayWeb3 = new Web3(relayProvider);
+Rbrelay.setProvider(relayProvider)
+Rb20.setProvider(relayProvider)
+Target.setProvider(relayProvider)
 
 renderTitle()
 switch(command) {
@@ -39,6 +37,7 @@ switch(command) {
     break;
   case "start":
     var relayProvider = getWalletProvider(option1)
+    console.log('relayProvider', relayProvider)
     serveHeaders(relayProvider)
     break;
   case "tx":
@@ -52,6 +51,18 @@ switch(command) {
       break;
     }
     relayReceipt(option1, option2);
+    break;
+  case "secret":
+    if (!option1) {
+      console.log('please provide mnemonic with command')
+      break;
+    }
+    if (option1.split(' ').length !== 12) {
+      console.log('please provide a 12 word mnemonic')
+      break;
+    }
+    writeSecret(option1)
+    .then(res => console.log('wrote mnemonic to ./secrets.json'))
     break;
   default:
     console.log("Usage: rbrelay <command> <options>");
@@ -82,7 +93,7 @@ function getWalletProvider(network = "ropsten"){
 
 function renderTitle(){
   var str = ""
-  
+
   str += "\n   __     ___           __         _                \n"
   str += "  /__\\   / __\\         /__\\   ___ | |  __ _  _   _  \n"
   str += " / \\//  /__\\//  ___   / \\//  / _ \\| | / _` || | | | \n"
@@ -104,60 +115,64 @@ function renderTitle(){
     return output
   }
 
+function relayTx(txHash, targetAddr) {
+  var proof, rb;
+  ep.getTransactionProof(txHash).then(function(result) {
+    proof = web3ify(result);
+  }).then(function() {
+    return Rbrelay.deployed();
+  }).then(function(instance) {
+    rb = instance;
+    return rb.head.call();
+  }).then(function(result) {
+    return rb.rbchain.call(result);
+  }).then(function(result) {
+    if(proof.header.blockNumber > result) {
+      console.log("tx is too recent");
+    }
+  }).then(function() {
+    console.log("You are being charged 0.1 ether!!!");
+    return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
+  }).then(function(result) {
+    console.log(JSON.stringify(result) + "\n");
+    console.log(JSON.stringify(rlp.decode(proof.value)) + "\n");
+    return Target.deployed()
+  }).then(function(instance) {
+    var target = instance;
+    return target.numTransactionsProcessed();
+  }).then(function(_numTransactionsProcessed) {
+    console.log(_numTransactionsProcessed.toNumber())
+  }).catch((e)=>{console.log(e)});
+}
 
+function writeSecret(secret) {
+  return new Promise((res, rej) => {
+    fs.writeFile('./secrets.json', secret, function(err) {
+      if (err) rej(err)
+      res(true)
+    })
+  })
+}
 
-
-  function relayTx(txHash, targetAddr) {
-    var proof, rb;
-    ep.getTransactionProof(txHash).then(function(result) {
-      proof = web3ify(result);
-    }).then(function() {
-      return Rbrelay.deployed();
-    }).then(function(instance) {
-      rb = instance;
-      return rb.head.call();
-    }).then(function(result) {
-      return rb.rbchain.call(result);
-    }).then(function(result) {
-      if(proof.header.blockNumber > result) {
-        console.log("tx is too recent");
-      }
-    }).then(function() {
-      console.log("You are being charged 0.1 ether!!!");
-      return rb.relayTx(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 2000000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
-    }).then(function(result) {
-      console.log(JSON.stringify(result) + "\n");
-      console.log(JSON.stringify(rlp.decode(proof.value)) + "\n");
-      return Target.deployed()
-    }).then(function(instance) {
-      var target = instance;
-      return target.numTransactionsProcessed();
-    }).then(function(_numTransactionsProcessed) {
-      console.log(_numTransactionsProcessed.toNumber())
-    }).catch((e)=>{console.log(e)});
-  }
-
-  // function relayReceipt(txHash, targetAddr) {
-  //   var proof, rb;
-  //   ep.getReceiptProof(txHash).then(function(result) {
-  //     proof = web3ify(result);
-  //   }).then(function() {
-  //     return Rbrelay.deployed();
-  //   }).then(function(instance) {
-  //     rb = instance;
-  //     return rb.head.call();
-  //   }).then(function(result) {
-  //     return rb.rbchain.call(result);
-  //   }).then(function(result) {
-  //     if(proof.header.blockNumber > result) {
-  //       console.log("tx is too recent");
-  //     }
-  //   }).then(function() {
-  //     console.log("You are being charged 0.1 ether!!!");
-  //     return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
-  //   }).then(function(result) {
-  //     console.log(JSON.stringify(result));
-  //   });
-  // }
-
-
+// function relayReceipt(txHash, targetAddr) {
+//   var proof, rb;
+//   ep.getReceiptProof(txHash).then(function(result) {
+//     proof = web3ify(result);
+//   }).then(function() {
+//     return Rbrelay.deployed();
+//   }).then(function(instance) {
+//     rb = instance;
+//     return rb.head.call();
+//   }).then(function(result) {
+//     return rb.rbchain.call(result);
+//   }).then(function(result) {
+//     if(proof.header.blockNumber > result) {
+//       console.log("tx is too recent");
+//     }
+//   }).then(function() {
+//     console.log("You are being charged 0.1 ether!!!");
+//     return rb.relayReceipt(proof.value, proof.path, proof.parentNodes, proof.header, targetAddr, {gas: 200000, gasPrice: 25000000000, value: relayWeb3.toWei(0.1,'ether'), from: relayProvider.getAddress()});
+//   }).then(function(result) {
+//     console.log(JSON.stringify(result));
+//   });
+// }
