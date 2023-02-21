@@ -59,10 +59,6 @@ library MerklePatriciaProof {
                         return false;
                     }
                 }
-                //extension node
-                if(_nibblesToTraverse(RLP.toData(currentNodeList[0]), path, pathPtr) == 0) {
-                    return false;
-                }
 
                 nodeKey = RLP.toBytes32(currentNodeList[1]);
             } else {
